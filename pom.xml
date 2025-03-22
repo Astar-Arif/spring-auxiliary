@@ -7,11 +7,20 @@
         <groupId>com.astar.wallet</groupId>
         <artifactId>super-pom</artifactId>
         <version>1.0.0</version>
-        <relativePath>../super-pom</relativePath>
+        <relativePath>../../super-pom</relativePath>
     </parent>
 
     <artifactId>spring-utility</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
+
+    <dependencies>
+        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-data-jpa -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+            <version>${spring-boot.version}</version>
+        </dependency>
+    </dependencies>
 
 </project>
