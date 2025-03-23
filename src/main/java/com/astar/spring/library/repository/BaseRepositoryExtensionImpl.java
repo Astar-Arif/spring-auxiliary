@@ -3,6 +3,7 @@ package com.astar.spring.library.repository;
 import com.astar.spring.library.pojo.Filter;
 import jakarta.persistence.EntityManager;
 
+import java.math.BigInteger;
 import java.util.List;
 
 public class BaseRepositoryExtensionImpl<T> implements BaseRepositoryExtension<T> {
@@ -21,7 +22,17 @@ public class BaseRepositoryExtensionImpl<T> implements BaseRepositoryExtension<T
     }
 
     @Override
-    public T fetchByPrinciple(Filter filter) {
+    public BigInteger countEntity(List<Filter> filters) {
+        return null;
+    }
+
+    @Override
+    public T fetchByPrinciple(List<Filter> filter) {
+        return null;
+    }
+
+    @Override
+    public T fetchEntity(List<Filter> filter) {
         return null;
     }
 
@@ -31,7 +42,12 @@ public class BaseRepositoryExtensionImpl<T> implements BaseRepositoryExtension<T
     }
 
     @Override
-    public T fetchEntity(Filter filter) {
+    public BigInteger deleteWithConditions(List<Filter> filters) {
+        return null;
+    }
+
+    @Override
+    public BigInteger deleteWithPredicate(List<Filter> filters) {
         return null;
     }
 
