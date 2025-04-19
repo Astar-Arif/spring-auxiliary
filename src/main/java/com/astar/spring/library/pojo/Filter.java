@@ -8,13 +8,11 @@ import lombok.Setter;
 
 @AllArgsConstructor
 @NoArgsConstructor
+@Getter
 @Setter
 public class Filter {
-    @Getter
     private String field;
-    @Getter
     private SQLOperator Operator;
-    @Getter
     private Object value;
 
 }
