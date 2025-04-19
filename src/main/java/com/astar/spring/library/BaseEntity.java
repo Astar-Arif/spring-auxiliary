@@ -1,36 +1,41 @@
 package com.astar.spring.library;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.AbstractPersistable;
+import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @MappedSuperclass
-@Getter
-@Setter
-public abstract class BaseEntity {
+@Getter @Setter
+public abstract class BaseEntity<ID extends Serializable> extends AbstractPersistable<ID> {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
-    private UUID id;
+    @CreatedBy
+    @JsonIgnore
+    private ID createdByID;
 
-
+    @CreatedDate
+    @Temporal(TemporalType.TIMESTAMP)
     @Column(nullable = false, updatable = false)
+    @JsonIgnore
     private LocalDateTime createdAt;
 
-    @Column(nullable = false)
-    private LocalDateTime updatedAt;
+    @LastModifiedBy
+    @JsonIgnore
+    private LocalDateTime modifiedBy;
 
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-    }
+    @LastModifiedDate
+    @Temporal(TemporalType.TIMESTAMP)
+    @JsonIgnore
+    private LocalDateTime modifiedDate;
 
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
+    @Version
+    @JsonIgnore
+    private Long version;
 }
