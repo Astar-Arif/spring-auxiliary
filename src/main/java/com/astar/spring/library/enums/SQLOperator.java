@@ -38,9 +38,8 @@ public enum SQLOperator {
     JSONB_CONTAINED_BY("<@"),
 
 
-    ARRAY_CONTAINS("@>"),
-    ARRAY_CONTAINED_BY("<@"),
     ARRAY_OVERLAPS("&&"),
+    ARRAY_CONTAINS("&&"),
 
 
     TEXT_SEARCH_MATCH("@@"),

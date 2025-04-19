@@ -12,7 +12,7 @@ import lombok.Setter;
 @Setter
 public class Filter {
     private String field;
-    private SQLOperator sqlOperator;
+    private SQLOperator Operator;
     private Object value;
 
 }
