@@ -1,6 +1,5 @@
 package com.astar.spring.library.utils;
 
-import com.astar.common.library.pojo.StringRule;
 import com.astar.common.library.utils.ObjectUtility;
 import com.astar.spring.library.enums.SQLOperator;
 import com.astar.spring.library.pojo.Filter;
