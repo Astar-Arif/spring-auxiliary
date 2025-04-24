@@ -255,8 +255,10 @@ public abstract class DatabaseUtility {
                     criteriaBuilder.function(
                             "ts_match_vq",
                             Boolean.class,
-                            criteriaBuilder.function("to_tsvector", String.class, criteriaBuilder.literal("english"), path),
-                            criteriaBuilder.function("to_tsquery", String.class, criteriaBuilder.literal(filter.getValue()))
+                            criteriaBuilder.function("to_tsvector", String.class,
+                                                     criteriaBuilder.literal("english"), path),
+                            criteriaBuilder.function("to_tsquery", String.class,
+                                                     criteriaBuilder.literal(filter.getValue()))
                     )
             );
             case CIDR_CONTAINS -> criteriaBuilder.isTrue(
@@ -276,7 +278,6 @@ public abstract class DatabaseUtility {
                             criteriaBuilder.literal(filter.getValue())
                     )
             );
-
 
 
 //            TODO HANDLE FOR MORE DSA

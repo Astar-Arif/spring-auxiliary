@@ -54,7 +54,8 @@ public class BaseRepositoryExtensionImpl<T> implements BaseRepositoryExtension<T
     @Override
     public void test() {
         try {
-            String databaseName = (String) entityManager.createNativeQuery("SELECT current_database()").getSingleResult();
+            String databaseName = (String) entityManager.createNativeQuery(
+                    "SELECT current_database()").getSingleResult();
             System.out.println("Connected to database: " + databaseName);
         } catch (Exception e) {
             System.err.println("Error fetching database name: " + e.getMessage());
