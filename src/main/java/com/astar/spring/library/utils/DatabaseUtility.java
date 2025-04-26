@@ -16,7 +16,7 @@ import org.hibernate.persister.entity.SingleTableEntityPersister;
 
 import java.util.*;
 import java.util.stream.Collectors;
-//TODO TEST ALL THIS / ADD IMPLEMENTATION / CHECK ERRORS
+//TODO TEST ALL THIS / ADD IMPLEMENTATION / CHECK ERRORS / IMPROVE
 
 /**
  * The type Database utility.
@@ -345,9 +345,25 @@ public abstract class DatabaseUtility {
      * @param filters the filters
      * @return the predicate
      */
-    public static Predicate createPredicates(List<Filter> filters) {
-        return null;
+    public static Predicate createPredicates(CriteriaBuilder criteriaBuilder, Root<?> root, List<Filter> filters) {
+        List<Predicate> predicates = new ArrayList<>();
+        if (filters != null && !filters.isEmpty()) {
+            for (Filter filter : filters) {
+                Predicate predicate = createPredicate(criteriaBuilder, root, filter);
+                if (predicate != null) {
+                    predicates.add(predicate);
+                }
+            }
+        } else {
+            return criteriaBuilder.conjunction();
+        }
+        if (!predicates.isEmpty()) {
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        } else {
+            return criteriaBuilder.conjunction();
+        }
     }
+
 
     /**
      * Predicate to string string.
