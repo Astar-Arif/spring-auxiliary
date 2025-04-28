@@ -4,6 +4,7 @@ import com.astar.spring.library.pojo.Filter;
 
 import java.math.BigInteger;
 import java.util.List;
+import java.util.Map;
 
 public interface BaseRepositoryExtension<T> {
     /**
@@ -19,16 +20,27 @@ public interface BaseRepositoryExtension<T> {
     BigInteger countEntity(List<Filter> filters);
 
     /**
-     * @param filter
-     * @return
+     * Fetches a single entity based on filters.
+     *
+     * Returns the entity if found, null if no result, throws Exception if multiple results or other error.
+     *
+     * @param filters List of filters to apply.
+     * @return The found entity or null.
+     * @throws Exception if more than one result is found or another error occurs.
      */
-    T fetchByPrinciple(List<Filter> filter);
+    T fetchByPrinciple(List<Filter> filters);
 
     /**
-     * @param filter
-     * @return
+     * Fetches an entity based on a list of filters.
+     *
+     * Returns the first entity found if multiple match the criteria,
+     * or the single entity if only one matches,
+     * or null if no entity matches the criteria.
+     *
+     * @param filters A list of filters to apply to the query.
+     * @return The first matching entity, or null if no entity is found.
      */
-    T fetchEntity(List<Filter> filter);
+    T fetchEntity(List<Filter> filters);
 
     /**
      * @param filters
@@ -36,17 +48,27 @@ public interface BaseRepositoryExtension<T> {
      */
     List<T> fetchEntities(List<Filter> filters);
 
-    /**
-     * @param filters
-     * @return
-     */
-    BigInteger deleteWithConditions(List<Filter> filters);
 
     /**
      * @param filters
      * @return
      */
-    BigInteger deleteWithPredicate(List<Filter> filters);
+    byte deleteEntity(List<Filter> filters);
+
+    /**
+     * @param filters
+     * @return
+     */
+    BigInteger deleteEntities(List<Filter> filters);
+
+//    /**
+//     *
+//     * @param filters
+//     * @param changes
+//     * @return
+//     */
+//    byte updateEntities(List<Filter> filters, Map<String, Object> changes);
+
 
     /**
      *

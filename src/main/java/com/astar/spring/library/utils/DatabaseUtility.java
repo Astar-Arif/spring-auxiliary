@@ -3,17 +3,20 @@ package com.astar.spring.library.utils;
 import com.astar.common.library.utils.ObjectUtility;
 import com.astar.spring.library.enums.SQLOperator;
 import com.astar.spring.library.pojo.Filter;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.*;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.EntityType;
+import jakarta.persistence.metamodel.Metamodel;
 import org.apache.commons.lang3.tuple.Pair;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.metamodel.MappingMetamodel;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.persister.entity.SingleTableEntityPersister;
 
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Collectors;
 //TODO TEST ALL THIS / ADD IMPLEMENTATION / CHECK ERRORS / IMPROVE
@@ -23,6 +26,25 @@ import java.util.stream.Collectors;
  */
 @SuppressWarnings("unchecked")
 public abstract class DatabaseUtility {
+
+    /**
+     *
+     * @param entityManager
+     * @param clazz
+     * @param column
+     * @return
+     */
+    public boolean isColumnUnique(EntityManager entityManager, Class<?> clazz, String column){
+        Metamodel metamodel = entityManager.getMetamodel();
+        EntityType<?> et = metamodel.entity(clazz);
+        Attribute<?,?> att = et.getAttribute(column);
+        if (att.getJavaMember() instanceof Field field){
+            Column col = field.getAnnotation(Column.class);
+            return (col != null && col.unique());
+        } else {
+            return false;
+        }
+    }
 
     /**
      * Get table name string.
