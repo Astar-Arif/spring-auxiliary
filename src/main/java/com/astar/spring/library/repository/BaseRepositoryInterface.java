@@ -1,17 +1,24 @@
 package com.astar.spring.library.repository;
 
 import com.astar.spring.library.pojo.Filter;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigInteger;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
-public interface BaseRepositoryExtension<T> {
+public interface BaseRepositoryInterface<T, ID>  {
     /**
      * @param filters
      * @return
      */
     T exists(List<Filter> filters);
+
+    /**
+     * @param filters
+     * @return
+     */
+    boolean existsBoolean(List<Filter> filters);
 
     /**
      * @param filters
@@ -29,6 +36,7 @@ public interface BaseRepositoryExtension<T> {
      * @throws Exception if more than one result is found or another error occurs.
      */
     T fetchByPrinciple(List<Filter> filters);
+
 
     /**
      * Fetches an entity based on a list of filters.
@@ -69,6 +77,8 @@ public interface BaseRepositoryExtension<T> {
 //     */
 //    byte updateEntities(List<Filter> filters, Map<String, Object> changes);
 
+
+    Optional<T> findOne(Specification<T> spec);
 
     /**
      *

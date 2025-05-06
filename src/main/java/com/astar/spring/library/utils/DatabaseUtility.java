@@ -15,6 +15,7 @@ import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.metamodel.MappingMetamodel;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.persister.entity.SingleTableEntityPersister;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -386,7 +387,25 @@ public abstract class DatabaseUtility {
         }
     }
 
+    /**
+     *
+     * @param filters
+     * @return
+     * @param <T>
+     */
+    public static <T> Specification<T> createSpecifications(List<Filter> filters){
+        return (root, query, criteriaBuilder) -> createPredicates(criteriaBuilder, root, filters);
+    }
 
+    /**
+     *
+     * @param filter
+     * @return
+     * @param <T>
+     */
+    public static <T> Specification<T> createSpecification(Filter filter){
+        return (root, query, criteriaBuilder) -> createPredicate(criteriaBuilder, root, filter);
+    }
     /**
      * Predicate to string string.
      *
