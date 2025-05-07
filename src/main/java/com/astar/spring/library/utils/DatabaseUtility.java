@@ -425,9 +425,11 @@ public abstract class DatabaseUtility {
     }
 
 
-    public static <T> Specification<T> createSpecification(MultiFilter multiFilter){
-        return (root, query, criteriaBuilder) -> createPredicates(criteriaBuilder,root, multiFilter);
+    public static <T> Specification<T> createSpecification(MultiFilter multiFilter) {
+        return (root, query, criteriaBuilder) -> createPredicates(criteriaBuilder, root,
+                                                                  multiFilter);
     }
+
     /**
      * @param filter
      * @param <T>
