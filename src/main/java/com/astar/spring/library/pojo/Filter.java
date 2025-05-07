@@ -10,10 +10,12 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
-public class Filter {
+public final class Filter extends SQLFilter{
     private String field;
     private SQLOperator Operator;
     private Object value;
+//    TODO IMPLEMENT THIS IN DATABASE UTILITY
+    private boolean isNegated;
 
 }
 

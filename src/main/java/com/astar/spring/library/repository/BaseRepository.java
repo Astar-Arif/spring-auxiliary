@@ -1,19 +1,26 @@
 package com.astar.spring.library.repository;
 
+import com.astar.spring.library.enums.LogicalOperator;
 import com.astar.spring.library.pojo.Filter;
+import com.astar.spring.library.pojo.MultiFilter;
+import com.astar.spring.library.pojo.SQLFilter;
 import com.astar.spring.library.utils.DatabaseUtility;
 import jakarta.persistence.*;
-import jakarta.persistence.criteria.*;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaUpdate;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.support.JpaEntityInformation;
 import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 
-import java.math.BigInteger;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 //TODO IMPROVE
@@ -32,111 +39,190 @@ public class BaseRepository<T, ID>  extends SimpleJpaRepository<T, ID> implement
         this.clazz = entityInformation.getJavaType();
         this.logger = LoggerFactory.getLogger(clazz);
     }
-
     @Override
-    public T exists(List<Filter> filters) {
-        return null;
+    public <S extends SQLFilter> List<T> findAll(S filter) {
+        Specification<T> spec;
+        if (filter instanceof Filter f) spec = DatabaseUtility.createSpecification(f);
+        else if (filter instanceof MultiFilter mf) spec = DatabaseUtility.createSpecification(mf);
+        //TODO: HIHI
+        else throw new RuntimeException("Invalid Filter");
+
+        return super.findAll(spec);
     }
 
     @Override
-    public boolean existsBoolean(List<Filter> filters) {
-        return false;
-    }
-
-    @Override
-    public BigInteger countEntity(List<Filter> filters) {
-        return null;
-    }
-
-    @Override
-    public T fetchByPrinciple(List<Filter> filters) {
-        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
-        CriteriaQuery<T> criteriaQuery = criteriaBuilder.createQuery(clazz);
-        Root<T> root = criteriaQuery.from(clazz);
-        Predicate predicate = DatabaseUtility.createPredicates(criteriaBuilder, root, filters);
-        if (predicate != null) {
-            criteriaQuery.where(predicate);
+    public <S extends SQLFilter> Page<T> findAll(List<S> filters, Pageable pageable, LogicalOperator logicalOperator) {
+        Specification<T> spec = null;
+        for (S filter : filters){
+            Specification<T> currSpec = null;
+            if (filter instanceof Filter f) currSpec = DatabaseUtility.createSpecification(f);
+            else if (filter instanceof MultiFilter mf) currSpec = DatabaseUtility.createSpecification(mf);
+                // !Should be impossible
+            else throw new RuntimeException("Invalid Stuff");
+            if (spec == null) spec = currSpec;
+            else {
+                if (LogicalOperator.AND.equals(logicalOperator)) spec.and(currSpec);
+                else if (LogicalOperator.OR.equals(logicalOperator))spec.or(currSpec);
+                else throw new RuntimeException("Invalid Logical Operator");
+            }
         }
-        TypedQuery<T> query = entityManager.createQuery(criteriaQuery);
-        try {
-            return query.getSingleResult();
-        } catch (NoResultException nre) {
-            return null;
-        }
+        return super.findAll(spec, pageable);
     }
 
     @Override
-    public Optional<T> findOne(Specification<T> spec) {
-        this.logger.info("Hello World");
-        return null;
+    public <S extends SQLFilter> Optional<T> findOne(S filter) {
+        Specification<T> spec;
+        if (filter instanceof Filter f) spec = DatabaseUtility.createSpecification(f);
+        else if (filter instanceof MultiFilter mf) spec = DatabaseUtility.createSpecification(mf);
+            //TODO: HIHI
+        else throw new RuntimeException("Invalid Filter");
+        return super.findOne(spec);
+
     }
 
     @Override
-    public T fetchEntity(List<Filter> filters) {
-        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
-        CriteriaQuery<T> criteriaQuery = criteriaBuilder.createQuery(clazz);
-        Root<T> root = criteriaQuery.from(clazz);
-        Predicate predicate = DatabaseUtility.createPredicates(criteriaBuilder, root, filters);
-        if (predicate != null) {
-            criteriaQuery.where(predicate);
+    public <S extends SQLFilter> Optional<T> findOne(List<S> filters, LogicalOperator logicalOperator) {
+        Specification<T> spec = null;
+        for (S filter : filters){
+            Specification<T> currSpec = null;
+            if (filter instanceof Filter f) currSpec = DatabaseUtility.createSpecification(f);
+            else if (filter instanceof MultiFilter mf) currSpec = DatabaseUtility.createSpecification(mf);
+                // !Should be impossible
+            else throw new RuntimeException("Invalid Stuff");
+            if (spec == null) spec = currSpec;
+            else {
+                if (LogicalOperator.AND.equals(logicalOperator)) spec.and(currSpec);
+                else if (LogicalOperator.OR.equals(logicalOperator))spec.or(currSpec);
+                else throw new RuntimeException("Invalid Logical Operator");
+            }
         }
-        TypedQuery<T> query = entityManager.createQuery(criteriaQuery);
-        List<T> resultList = query.getResultList();
-        if (resultList.isEmpty()) {
-            return null;
-        } else {
-            return resultList.getFirst();
-        }
+        return super.findOne(spec);
     }
 
     @Override
-    public List<T> fetchEntities(List<Filter> filters) {
-        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
-        CriteriaQuery<T> criteriaQuery = criteriaBuilder.createQuery(clazz);
-        Root<T> root = criteriaQuery.from(clazz);
-        Predicate predicate = DatabaseUtility.createPredicates(criteriaBuilder, root, filters);
-        if (predicate != null) {
-            criteriaQuery.where(predicate);
+    public <S extends SQLFilter> T findRequiredOne(S filter) throws Exception {
+        Optional<T> optionalT = this.findOne(filter);
+        // TODO :  JAJA
+        if (optionalT.isEmpty()) throw new Exception("Throwing this stuff");
+        return optionalT.get();
+    }
+
+    @Override
+    public <S extends SQLFilter> T findRequiredOne(List<S> filters, LogicalOperator logicalOperator) throws Exception {
+        Optional<T> optionalT = this.findOne(filters, logicalOperator);
+        // TODO :  JAJA
+        if (optionalT.isEmpty()) throw new Exception("Throwing this stuff");
+        return optionalT.get();
+    }
+
+    @Override
+    public <S extends SQLFilter> T findNullableOne(S filter) {
+        Optional<T> optionalT = this.findOne(filter);
+        return optionalT.orElse(null);
+    }
+
+    @Override
+    public <S extends SQLFilter> T findNullableOne(List<S> filters, LogicalOperator logicalOperator) {
+        Optional<T> optionalT = this.findOne(filters, logicalOperator);
+        return optionalT.orElse(null);
+    }
+
+    @Override
+    public <S extends SQLFilter> long count(List<S> filters, LogicalOperator logicalOperator) {
+        Specification<T> spec = null;
+        for (S filter : filters){
+            Specification<T> currSpec = null;
+            if (filter instanceof Filter f) currSpec = DatabaseUtility.createSpecification(f);
+            else if (filter instanceof MultiFilter mf) currSpec = DatabaseUtility.createSpecification(mf);
+                // !Should be impossible
+            else throw new RuntimeException("Invalid Stuff");
+            if (spec == null) spec = currSpec;
+            else {
+                if (LogicalOperator.AND.equals(logicalOperator)) spec.and(currSpec);
+                else if (LogicalOperator.OR.equals(logicalOperator))spec.or(currSpec);
+                else throw new RuntimeException("Invalid Logical Operator");
+            }
         }
-        TypedQuery<T> query = entityManager.createQuery(criteriaQuery);
-        return query.getResultList();
+        return super.count(spec);
+    }
+
+    @Override
+    public <S extends SQLFilter> boolean exists(List<S> filters, LogicalOperator logicalOperator) {
+        Specification<T> spec = null;
+        for (S filter : filters){
+            Specification<T> currSpec = null;
+            if (filter instanceof Filter f) currSpec = DatabaseUtility.createSpecification(f);
+            else if (filter instanceof MultiFilter mf) currSpec = DatabaseUtility.createSpecification(mf);
+                // !Should be impossible
+            else throw new RuntimeException("Invalid Stuff");
+            if (spec == null) spec = currSpec;
+            else {
+                if (LogicalOperator.AND.equals(logicalOperator)) spec.and(currSpec);
+                else if (LogicalOperator.OR.equals(logicalOperator))spec.or(currSpec);
+                else throw new RuntimeException("Invalid Logical Operator");
+            }
+        }
+        return super.exists(spec);
     }
 
     @Override
     @Transactional
-    public byte deleteEntity(List<Filter> filters) {
-        T entity = fetchEntity(filters);
-        if (entity != null) {
-            entityManager.remove(entity);
-            return 1;
-        } else {
-            return 0;
-        }
+    public <S extends SQLFilter> long delete(S filter){
+        Specification<T> spec;
+        if (filter instanceof Filter f) spec = DatabaseUtility.createSpecification(f);
+        else if (filter instanceof MultiFilter mf) spec = DatabaseUtility.createSpecification(mf);
+            //TODO: HIHI
+        else throw new RuntimeException("Invalid Filter");
+        return super.delete(spec);
+
     }
 
     @Override
     @Transactional
-    public BigInteger deleteEntities(List<Filter> filters) {
-        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
-        CriteriaDelete<T> criteriaDelete = criteriaBuilder.createCriteriaDelete(clazz);
-        Root<T> root = criteriaDelete.from(clazz);
-        Predicate predicate = DatabaseUtility.createPredicates(criteriaBuilder, root, filters);
-        if (predicate != null){
-            criteriaDelete.where(predicate);
-        } else {
-            this.logger.warn("No predicate created in a delete statement");
+    public <S extends SQLFilter> long delete(List<S> filters, LogicalOperator logicalOperator) {
+        Specification<T> spec = null;
+        for (S filter : filters){
+            Specification<T> currSpec = null;
+            if (filter instanceof Filter f) currSpec = DatabaseUtility.createSpecification(f);
+            else if (filter instanceof MultiFilter mf) currSpec = DatabaseUtility.createSpecification(mf);
+                // !Should be impossible
+            else throw new RuntimeException("Invalid Stuff");
+            if (spec == null) spec = currSpec;
+            else {
+                if (LogicalOperator.AND.equals(logicalOperator)) spec.and(currSpec);
+                else if (LogicalOperator.OR.equals(logicalOperator))spec.or(currSpec);
+                else throw new RuntimeException("Invalid Logical Operator");
+            }
         }
-        Query query = entityManager.createQuery(criteriaDelete);
-        entityManager.clear();
-        return BigInteger.valueOf(query.executeUpdate());
+        return super.delete(spec);
     }
-    // todo : dangerous, think it over
-//    @Override
-//    public byte updateEntities(List<Filter> filters, Map<String, Object> changes) {
-//        return 0;
-//    }
 
-
+    @Override
+    @Transactional
+    public <S extends SQLFilter> long update(List<S> filters, Map<String, Object> changes, LogicalOperator logicalOperator) {
+        CriteriaBuilder criteriaBuilder = this.entityManager.getCriteriaBuilder();
+        CriteriaUpdate<T> criteriaUpdate = criteriaBuilder.createCriteriaUpdate(this.clazz);
+        Root<T> root = criteriaUpdate.from(this.clazz);
+        for (Map.Entry<String, Object> entry : changes.entrySet()){
+            criteriaUpdate.set(root.get(entry.getKey()), entry.getValue());
+        }
+        Predicate pred = null;
+        for (S filter : filters) {
+            Predicate currPred = null;
+            if (filter instanceof Filter f) currPred = DatabaseUtility.createPredicate(criteriaBuilder, root, f);
+            else if (filter instanceof MultiFilter mf) currPred = DatabaseUtility.createPredicates(criteriaBuilder, root, mf);
+                // !Should be impossible
+            else throw new RuntimeException("Invalid Stuff");
+            if (pred == null) pred = currPred;
+            else {
+                if (LogicalOperator.AND.equals(logicalOperator)) criteriaBuilder.and(pred, currPred);
+                else if (LogicalOperator.OR.equals(logicalOperator)) criteriaBuilder.or(pred, currPred);
+                else throw new RuntimeException("Invalid Logical Operator");
+            }
+        }
+        criteriaUpdate.where(pred);
+        return this.entityManager.createQuery(criteriaUpdate).executeUpdate();
+    }
     @Override
     public void test() {
         try {

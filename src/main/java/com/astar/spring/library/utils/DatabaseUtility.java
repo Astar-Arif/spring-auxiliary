@@ -1,8 +1,10 @@
 package com.astar.spring.library.utils;
 
 import com.astar.common.library.utils.ObjectUtility;
+import com.astar.spring.library.enums.LogicalOperator;
 import com.astar.spring.library.enums.SQLOperator;
 import com.astar.spring.library.pojo.Filter;
+import com.astar.spring.library.pojo.MultiFilter;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityManager;
@@ -29,17 +31,16 @@ import java.util.stream.Collectors;
 public abstract class DatabaseUtility {
 
     /**
-     *
      * @param entityManager
      * @param clazz
      * @param column
      * @return
      */
-    public boolean isColumnUnique(EntityManager entityManager, Class<?> clazz, String column){
+    public boolean isColumnUnique(EntityManager entityManager, Class<?> clazz, String column) {
         Metamodel metamodel = entityManager.getMetamodel();
         EntityType<?> et = metamodel.entity(clazz);
-        Attribute<?,?> att = et.getAttribute(column);
-        if (att.getJavaMember() instanceof Field field){
+        Attribute<?, ?> att = et.getAttribute(column);
+        if (att.getJavaMember() instanceof Field field) {
             Column col = field.getAnnotation(Column.class);
             return (col != null && col.unique());
         } else {
@@ -368,7 +369,8 @@ public abstract class DatabaseUtility {
      * @param filters the filters
      * @return the predicate
      */
-    public static Predicate createPredicates(CriteriaBuilder criteriaBuilder, Root<?> root, List<Filter> filters) {
+    public static Predicate createPredicates(
+            CriteriaBuilder criteriaBuilder, Root<?> root, List<Filter> filters) {
         List<Predicate> predicates = new ArrayList<>();
         if (filters != null && !filters.isEmpty()) {
             for (Filter filter : filters) {
@@ -387,25 +389,54 @@ public abstract class DatabaseUtility {
         }
     }
 
-    /**
-     *
-     * @param filters
-     * @return
-     * @param <T>
-     */
-    public static <T> Specification<T> createSpecifications(List<Filter> filters){
-        return (root, query, criteriaBuilder) -> createPredicates(criteriaBuilder, root, filters);
+    public static Predicate createPredicates(
+            CriteriaBuilder criteriaBuilder, Root<?> root, MultiFilter multiFilter) {
+        List<Predicate> predicates = new ArrayList<>();
+        List<Filter> filters = multiFilter.getFilters();
+        if (filters != null && !filters.isEmpty()) {
+            for (Filter filter : filters) {
+                Predicate predicate = createPredicate(criteriaBuilder, root, filter);
+                if (predicate != null) {
+                    predicates.add(predicate);
+                }
+            }
+        } else {
+            return criteriaBuilder.conjunction();
+        }
+        if (!predicates.isEmpty()) {
+            LogicalOperator logicalOperator = multiFilter.getOperator();
+            Predicate combined;
+            if (logicalOperator.equals(LogicalOperator.OR))
+                combined = criteriaBuilder.or(predicates.toArray(new Predicate[0]));
+            else combined = criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+            if (multiFilter.isNegated()) combined = criteriaBuilder.not(combined);
+            return combined;
+        }
+        return criteriaBuilder.conjunction();
     }
 
     /**
-     *
-     * @param filter
-     * @return
+     * @param filters
      * @param <T>
+     * @return
      */
-    public static <T> Specification<T> createSpecification(Filter filter){
+    public static <T> Specification<T> createSpecifications(List<Filter> filters) {
+        return (root, query, criteriaBuilder) -> createPredicates(criteriaBuilder, root, filters);
+    }
+
+
+    public static <T> Specification<T> createSpecification(MultiFilter multiFilter){
+        return (root, query, criteriaBuilder) -> createPredicates(criteriaBuilder,root, multiFilter);
+    }
+    /**
+     * @param filter
+     * @param <T>
+     * @return
+     */
+    public static <T> Specification<T> createSpecification(Filter filter) {
         return (root, query, criteriaBuilder) -> createPredicate(criteriaBuilder, root, filter);
     }
+
     /**
      * Predicate to string string.
      *
