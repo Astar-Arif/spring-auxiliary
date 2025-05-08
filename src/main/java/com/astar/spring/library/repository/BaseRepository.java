@@ -5,11 +5,11 @@ import com.astar.spring.library.pojo.Filter;
 import com.astar.spring.library.pojo.MultiFilter;
 import com.astar.spring.library.pojo.SQLFilter;
 import com.astar.spring.library.utils.DatabaseUtility;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaUpdate;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
+import jakarta.persistence.Tuple;
+import jakarta.persistence.TypedQuery;
+import jakarta.persistence.criteria.*;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,14 +18,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.support.JpaEntityInformation;
 import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
+import org.springframework.util.Assert;
 
+import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
 //TODO IMPROVE
-
-
 public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements BaseRepositoryInterface<T, ID> {
 
     private final EntityManager entityManager;
@@ -39,28 +39,14 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         this.clazz = entityInformation.getJavaType();
         this.logger = LoggerFactory.getLogger(clazz);
     }
-
-    @Override
-    public <S extends SQLFilter> List<T> findAll(S filter) {
-        Specification<T> spec;
-        if (filter instanceof Filter f) spec = DatabaseUtility.createSpecification(f);
-        else if (filter instanceof MultiFilter mf) spec = DatabaseUtility.createSpecification(mf);
-            //TODO: HIHI
-        else throw new RuntimeException("Invalid Filter");
-
-        return super.findAll(spec);
-    }
-
-    @Override
-    public <S extends SQLFilter> Page<T> findAll(
-            List<S> filters, Pageable pageable, LogicalOperator logicalOperator) {
+    
+    private <S extends SQLFilter> Specification<T> createSpecificationHelper(List<S> filters, LogicalOperator logicalOperator){
         Specification<T> spec = null;
         for (S filter : filters) {
             Specification<T> currSpec = null;
             if (filter instanceof Filter f) currSpec = DatabaseUtility.createSpecification(f);
             else if (filter instanceof MultiFilter mf)
                 currSpec = DatabaseUtility.createSpecification(mf);
-                // !Should be impossible
             else throw new RuntimeException("Invalid Stuff");
             if (spec == null) spec = currSpec;
             else {
@@ -69,6 +55,74 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
                 else throw new RuntimeException("Invalid Logical Operator");
             }
         }
+        return spec;
+        
+    }
+    private <S, U extends T> Root<U> applySpecificationToCriteria(@Nullable Specification<U> spec, Class<U> domainClass, CriteriaQuery<S> query){
+        Assert.notNull(domainClass, "Domain class must not be null");
+        Assert.notNull(query, "CriteriaQuery must not be null");
+        Root<U> root = query.from(domainClass);
+        if (spec != null) {
+            CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
+            Predicate predicate = spec.toPredicate(root, query, builder);
+            if (predicate != null) {
+                query.where(predicate);
+            }
+        }
+        return root;
+    }
+    protected <S extends T> TypedQuery<BigInteger> getSumQuery(@Nullable Specification<S> spec, Class<S> domainClass, String column){
+        CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
+        CriteriaQuery<BigInteger> query = builder.createQuery(BigInteger.class);
+        Root<S> root = this.applySpecificationToCriteria(spec, domainClass, query);
+        query.select(builder.sum(root.get(column)));
+        return this.entityManager.createQuery(query);
+    }
+
+    protected <S extends T> TypedQuery<Double> getAvgQuery(@Nullable Specification<S> spec, Class<S> domainClass, String column){
+        CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
+        CriteriaQuery<Double> query = builder.createQuery(Double.class);
+        Root<S> root = this.applySpecificationToCriteria(spec, domainClass, query);
+        query.select(builder.avg(root.get(column)));
+        return this.entityManager.createQuery(query);
+
+    }
+
+    protected <S extends T> TypedQuery<BigInteger> getMinQuery(@Nullable Specification<S> spec, Class<S> domainClass, String column){
+        CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
+        CriteriaQuery<BigInteger> query = builder.createQuery(BigInteger.class);
+        Root<S> root = this.applySpecificationToCriteria(spec, domainClass, query);
+        query.select(builder.min(root.get(column)));
+        return this.entityManager.createQuery(query);
+    }
+
+    protected <S extends T> TypedQuery<BigInteger> getMaxQuery(@Nullable Specification<S> spec, Class<S> domainClass, String column){
+        CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
+        CriteriaQuery<BigInteger> query = builder.createQuery(BigInteger.class);
+        Root<S> root = this.applySpecificationToCriteria(spec, domainClass, query);
+        query.select(builder.max(root.get(column)));
+        return this.entityManager.createQuery(query);
+    }
+
+    @Override
+    public <S extends SQLFilter> List<T> findAll(S filter) {
+        Specification<T> spec;
+        if (filter instanceof Filter f) spec = DatabaseUtility.createSpecification(f);
+        else if (filter instanceof MultiFilter mf) spec = DatabaseUtility.createSpecification(mf);
+        else throw new RuntimeException("Invalid Filter");
+
+        return super.findAll(spec);
+    }
+
+    @Override
+    public <S extends SQLFilter> List<Tuple> findAll(S filter, Map<String, String> projections) {
+        return null;
+    }
+
+    @Override
+    public <S extends SQLFilter> Page<T> findAll(
+            List<S> filters, Pageable pageable, LogicalOperator logicalOperator) {
+        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);;
         return super.findAll(spec, pageable);
     }
 
@@ -77,7 +131,6 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         Specification<T> spec;
         if (filter instanceof Filter f) spec = DatabaseUtility.createSpecification(f);
         else if (filter instanceof MultiFilter mf) spec = DatabaseUtility.createSpecification(mf);
-            //TODO: HIHI
         else throw new RuntimeException("Invalid Filter");
         return super.findOne(spec);
 
@@ -86,28 +139,13 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
     @Override
     public <S extends SQLFilter> Optional<T> findOne(
             List<S> filters, LogicalOperator logicalOperator) {
-        Specification<T> spec = null;
-        for (S filter : filters) {
-            Specification<T> currSpec = null;
-            if (filter instanceof Filter f) currSpec = DatabaseUtility.createSpecification(f);
-            else if (filter instanceof MultiFilter mf)
-                currSpec = DatabaseUtility.createSpecification(mf);
-                // !Should be impossible
-            else throw new RuntimeException("Invalid Stuff");
-            if (spec == null) spec = currSpec;
-            else {
-                if (LogicalOperator.AND.equals(logicalOperator)) spec.and(currSpec);
-                else if (LogicalOperator.OR.equals(logicalOperator)) spec.or(currSpec);
-                else throw new RuntimeException("Invalid Logical Operator");
-            }
-        }
+        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
         return super.findOne(spec);
     }
 
     @Override
     public <S extends SQLFilter> T findRequiredOne(S filter) throws Exception {
         Optional<T> optionalT = this.findOne(filter);
-        // TODO :  JAJA
         if (optionalT.isEmpty()) throw new Exception("Throwing this stuff");
         return optionalT.get();
     }
@@ -116,7 +154,6 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
     public <S extends SQLFilter> T findRequiredOne(
             List<S> filters, LogicalOperator logicalOperator) throws Exception {
         Optional<T> optionalT = this.findOne(filters, logicalOperator);
-        // TODO :  JAJA
         if (optionalT.isEmpty()) throw new Exception("Throwing this stuff");
         return optionalT.get();
     }
@@ -135,42 +172,81 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
     }
 
     @Override
+    public <S extends SQLFilter> BigInteger sum(String column, S filter) {
+        Specification<T> spec;
+        if (filter instanceof Filter f) spec = DatabaseUtility.createSpecification(f);
+        else if (filter instanceof MultiFilter mf) spec = DatabaseUtility.createSpecification(mf);
+        else throw new RuntimeException("Invalid Filter");
+        return getSumQuery(spec, clazz, column).getSingleResult();
+    }
+
+    @Override
+    public <S extends SQLFilter> BigInteger sum(String column, List<S> filters, LogicalOperator logicalOperator) {
+        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
+        return getSumQuery(spec, clazz, column).getSingleResult();
+    }
+
+     @Override
+     public <S extends SQLFilter> Double avg(String column, S filter) {
+         Specification<T> spec;
+         if (filter instanceof Filter f) spec = DatabaseUtility.createSpecification(f);
+         else if (filter instanceof MultiFilter mf) spec = DatabaseUtility.createSpecification(mf);
+         else throw new RuntimeException("Invalid Filter");
+        return getAvgQuery(spec, clazz, column).getSingleResult();
+    }
+
+    @Override
+    public <S extends SQLFilter> Double avg(String column, List<S> filters,
+                                            LogicalOperator logicalOperator
+    ) {
+        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
+        return getAvgQuery(spec, clazz, column).getSingleResult();
+    }
+
+    @Override
+    public <S extends SQLFilter> BigInteger min(String column, S filter) {
+        Specification<T> spec;
+        if (filter instanceof Filter f) spec = DatabaseUtility.createSpecification(f);
+        else if (filter instanceof MultiFilter mf) spec = DatabaseUtility.createSpecification(mf);
+        else throw new RuntimeException("Invalid Filter");
+        return getMinQuery(spec, clazz, column).getSingleResult();
+    }
+
+    @Override
+    public <S extends SQLFilter> BigInteger min(String column, List<S> filters,
+                                                LogicalOperator logicalOperator
+    ) {
+        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
+        return getMinQuery(spec, clazz, column).getSingleResult();
+    }
+
+    @Override
+    public <S extends SQLFilter> BigInteger max(String column, S filter) {
+        Specification<T> spec;
+        if (filter instanceof Filter f) spec = DatabaseUtility.createSpecification(f);
+        else if (filter instanceof MultiFilter mf) spec = DatabaseUtility.createSpecification(mf);
+        else throw new RuntimeException("Invalid Filter");
+        return getMaxQuery(spec, clazz, column).getSingleResult();
+
+    }
+
+    @Override
+    public <S extends SQLFilter> BigInteger max(String column, List<S> filters,
+                                                LogicalOperator logicalOperator
+    ) {
+        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
+        return getMaxQuery(spec, clazz, column).getSingleResult();
+    }
+
+    @Override
     public <S extends SQLFilter> long count(List<S> filters, LogicalOperator logicalOperator) {
-        Specification<T> spec = null;
-        for (S filter : filters) {
-            Specification<T> currSpec = null;
-            if (filter instanceof Filter f) currSpec = DatabaseUtility.createSpecification(f);
-            else if (filter instanceof MultiFilter mf)
-                currSpec = DatabaseUtility.createSpecification(mf);
-                // !Should be impossible
-            else throw new RuntimeException("Invalid Stuff");
-            if (spec == null) spec = currSpec;
-            else {
-                if (LogicalOperator.AND.equals(logicalOperator)) spec.and(currSpec);
-                else if (LogicalOperator.OR.equals(logicalOperator)) spec.or(currSpec);
-                else throw new RuntimeException("Invalid Logical Operator");
-            }
-        }
+        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
         return super.count(spec);
     }
 
     @Override
     public <S extends SQLFilter> boolean exists(List<S> filters, LogicalOperator logicalOperator) {
-        Specification<T> spec = null;
-        for (S filter : filters) {
-            Specification<T> currSpec = null;
-            if (filter instanceof Filter f) currSpec = DatabaseUtility.createSpecification(f);
-            else if (filter instanceof MultiFilter mf)
-                currSpec = DatabaseUtility.createSpecification(mf);
-                // !Should be impossible
-            else throw new RuntimeException("Invalid Stuff");
-            if (spec == null) spec = currSpec;
-            else {
-                if (LogicalOperator.AND.equals(logicalOperator)) spec.and(currSpec);
-                else if (LogicalOperator.OR.equals(logicalOperator)) spec.or(currSpec);
-                else throw new RuntimeException("Invalid Logical Operator");
-            }
-        }
+        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
         return super.exists(spec);
     }
 
@@ -180,7 +256,6 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         Specification<T> spec;
         if (filter instanceof Filter f) spec = DatabaseUtility.createSpecification(f);
         else if (filter instanceof MultiFilter mf) spec = DatabaseUtility.createSpecification(mf);
-            //TODO: HIHI
         else throw new RuntimeException("Invalid Filter");
         return super.delete(spec);
 
@@ -189,21 +264,7 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
     @Override
     @Transactional
     public <S extends SQLFilter> long delete(List<S> filters, LogicalOperator logicalOperator) {
-        Specification<T> spec = null;
-        for (S filter : filters) {
-            Specification<T> currSpec = null;
-            if (filter instanceof Filter f) currSpec = DatabaseUtility.createSpecification(f);
-            else if (filter instanceof MultiFilter mf)
-                currSpec = DatabaseUtility.createSpecification(mf);
-                // !Should be impossible
-            else throw new RuntimeException("Invalid Stuff");
-            if (spec == null) spec = currSpec;
-            else {
-                if (LogicalOperator.AND.equals(logicalOperator)) spec.and(currSpec);
-                else if (LogicalOperator.OR.equals(logicalOperator)) spec.or(currSpec);
-                else throw new RuntimeException("Invalid Logical Operator");
-            }
-        }
+        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
         return super.delete(spec);
     }
 
@@ -214,28 +275,8 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         CriteriaBuilder criteriaBuilder = this.entityManager.getCriteriaBuilder();
         CriteriaUpdate<T> criteriaUpdate = criteriaBuilder.createCriteriaUpdate(this.clazz);
         Root<T> root = criteriaUpdate.from(this.clazz);
-        for (Map.Entry<String, Object> entry : changes.entrySet()) {
-            criteriaUpdate.set(root.get(entry.getKey()), entry.getValue());
-        }
-        Predicate pred = null;
-        for (S filter : filters) {
-            Predicate currPred = null;
-            if (filter instanceof Filter f)
-                currPred = DatabaseUtility.createPredicate(criteriaBuilder, root, f);
-            else if (filter instanceof MultiFilter mf)
-                currPred = DatabaseUtility.createPredicates(criteriaBuilder, root, mf);
-                // !Should be impossible
-            else throw new RuntimeException("Invalid Stuff");
-            if (pred == null) pred = currPred;
-            else {
-                if (LogicalOperator.AND.equals(logicalOperator))
-                    criteriaBuilder.and(pred, currPred);
-                else if (LogicalOperator.OR.equals(logicalOperator))
-                    criteriaBuilder.or(pred, currPred);
-                else throw new RuntimeException("Invalid Logical Operator");
-            }
-        }
-        criteriaUpdate.where(pred);
+        Predicate predicate = createSpecificationHelper(filters, logicalOperator).toPredicate(root, null, criteriaBuilder);
+        criteriaUpdate.where(predicate);
         return this.entityManager.createQuery(criteriaUpdate).executeUpdate();
     }
 
