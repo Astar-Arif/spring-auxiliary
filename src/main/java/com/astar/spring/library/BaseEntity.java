@@ -1,5 +1,6 @@
 package com.astar.spring.library;
 
+import com.astar.common.library.utils.UniqueUtility;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -12,6 +13,7 @@ import org.springframework.data.jpa.domain.AbstractPersistable;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @MappedSuperclass
 @Getter
@@ -19,6 +21,9 @@ import java.time.LocalDateTime;
 public abstract class BaseEntity<ID extends Serializable> extends AbstractPersistable<ID> {
 
     private static final String DEFAULT_CREATOR = "SYSTEM";
+
+    @Column
+    private UUID uuid;
 
     @CreatedBy
     @JsonIgnore
@@ -58,6 +63,9 @@ public abstract class BaseEntity<ID extends Serializable> extends AbstractPersis
         }
         if (this.modifiedDate == null) {
             this.modifiedDate = LocalDateTime.now();  // Use LocalDateTime.now() for current date
+        }
+        if (this.uuid == null){
+            this.uuid = UniqueUtility.generateUUID((byte) 7);
         }
     }
 
