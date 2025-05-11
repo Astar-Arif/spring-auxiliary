@@ -64,7 +64,7 @@ public abstract class BaseEntity<ID extends Serializable> extends AbstractPersis
         if (this.modifiedDate == null) {
             this.modifiedDate = LocalDateTime.now();  // Use LocalDateTime.now() for current date
         }
-        if (this.uuid == null){
+        if (this.uuid == null) {
             this.uuid = UniqueUtility.generateUUID((byte) 7);
         }
     }

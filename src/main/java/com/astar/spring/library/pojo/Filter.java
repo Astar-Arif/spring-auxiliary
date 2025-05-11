@@ -1,6 +1,7 @@
 package com.astar.spring.library.pojo;
 
 import com.astar.spring.library.enums.SQLOperator;
+import jakarta.persistence.criteria.JoinType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,6 +17,7 @@ public final class Filter extends SQLFilter {
     private Object value;
     //    TODO IMPLEMENT THIS IN DATABASE UTILITY
     private boolean isNegated;
+    private JoinType joinType;
 
 }
 

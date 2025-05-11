@@ -127,6 +127,16 @@ public abstract class DatabaseUtility {
         return null;
     }
 
+    // TODO
+    public static Selection<?> createSelection() {
+        return null;
+    }
+
+    // TODO
+    public static List<Selection<?>> createSelections() {
+        return null;
+    }
+
     /**
      * Create predicate predicate.
      *
@@ -140,7 +150,7 @@ public abstract class DatabaseUtility {
         if (filter.getValue() instanceof Subquery<?>) {
 //            TODO HANDLE SUBQUERY
         }
-        Path<?> path = handlePath(root, filter.getField());
+        Path<?> path = handlePath(root, filter.getField(), filter.getJoinType());
         return switch (filter.getOperator()) {
             case EQUALS -> criteriaBuilder.equal(path, filter.getValue());
             case NOT_EQUALS, NOT_EQUALS_ALT -> criteriaBuilder.notEqual(path, filter.getValue());
@@ -529,12 +539,13 @@ public abstract class DatabaseUtility {
      * @param field
      * @return
      */
-    private static Path<?> handlePath(Root<?> root, String field) {
+    private static Path<?> handlePath(Root<?> root, String field, JoinType joinType) {
         if (field.contains(".")) {
+            if (joinType == null) joinType = JoinType.INNER;
             String[] parts = field.split("\\.");
             From<?, ?> current = root;
             for (int i = 0; i < parts.length - 1; i++) {
-                current = current.join(parts[i]);
+                current = current.join(parts[i], joinType);
             }
             return current.get(parts[parts.length - 1]);
         }

@@ -9,7 +9,7 @@
         <version>1.0.0</version>
         <relativePath>../../super-pom</relativePath>
     </parent>
-
+    <!--TODO REPLACE EMOJI JAVA-->
     <artifactId>spring-auxiliary</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
@@ -19,10 +19,10 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
+                <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <source>21</source>
-                    <target>21</target>
+                    <source>${java-version}</source>
+                    <target>${java-version}</target>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>

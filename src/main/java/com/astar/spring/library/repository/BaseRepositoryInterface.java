@@ -11,7 +11,6 @@ import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 public interface BaseRepositoryInterface<T, ID> {
 
@@ -40,29 +39,31 @@ public interface BaseRepositoryInterface<T, ID> {
 
     <S extends SQLFilter> BigInteger sum(String column, S filter);
 
-    <S extends SQLFilter> BigInteger sum(String column, List<S> filters,
-                                         LogicalOperator logicalOperator
+    <S extends SQLFilter> BigInteger sum(
+            String column, List<S> filters,
+            LogicalOperator logicalOperator
     );
 
     <S extends SQLFilter> Double avg(String column, S filter);
 
-    <S extends SQLFilter> Double avg(String column, List<S> filters,
-                                     LogicalOperator logicalOperator
+    <S extends SQLFilter> Double avg(
+            String column, List<S> filters,
+            LogicalOperator logicalOperator
     );
 
     <S extends SQLFilter> BigInteger min(String column, S filter);
 
-    <S extends SQLFilter> BigInteger min(String column, List<S> filters,
-                                         LogicalOperator logicalOperator
+    <S extends SQLFilter> BigInteger min(
+            String column, List<S> filters,
+            LogicalOperator logicalOperator
     );
 
     <S extends SQLFilter> BigInteger max(String column, S filter);
 
-    <S extends SQLFilter> BigInteger max(String column, List<S> filters,
-                                         LogicalOperator logicalOperator
+    <S extends SQLFilter> BigInteger max(
+            String column, List<S> filters,
+            LogicalOperator logicalOperator
     );
-
-
 
 
     <S extends SQLFilter> long count(List<S> filters, LogicalOperator logicalOperator);

@@ -21,10 +21,10 @@ import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
 import org.springframework.util.Assert;
 
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
 //TODO IMPROVE
 public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements BaseRepositoryInterface<T, ID> {
 
@@ -39,8 +39,9 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         this.clazz = entityInformation.getJavaType();
         this.logger = LoggerFactory.getLogger(clazz);
     }
-    
-    private <S extends SQLFilter> Specification<T> createSpecificationHelper(List<S> filters, LogicalOperator logicalOperator){
+
+    private <S extends SQLFilter> Specification<T> createSpecificationHelper(
+            List<S> filters, LogicalOperator logicalOperator) {
         Specification<T> spec = null;
         for (S filter : filters) {
             Specification<T> currSpec = null;
@@ -56,9 +57,11 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
             }
         }
         return spec;
-        
+
     }
-    private <S, U extends T> Root<U> applySpecificationToCriteria(@Nullable Specification<U> spec, Class<U> domainClass, CriteriaQuery<S> query){
+
+    private <S, U extends T> Root<U> applySpecificationToCriteria(
+            @Nullable Specification<U> spec, Class<U> domainClass, CriteriaQuery<S> query) {
         Assert.notNull(domainClass, "Domain class must not be null");
         Assert.notNull(query, "CriteriaQuery must not be null");
         Root<U> root = query.from(domainClass);
@@ -71,7 +74,9 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         }
         return root;
     }
-    protected <S extends T> TypedQuery<BigInteger> getSumQuery(@Nullable Specification<S> spec, Class<S> domainClass, String column){
+
+    protected <S extends T> TypedQuery<BigInteger> getSumQuery(
+            @Nullable Specification<S> spec, Class<S> domainClass, String column) {
         CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
         CriteriaQuery<BigInteger> query = builder.createQuery(BigInteger.class);
         Root<S> root = this.applySpecificationToCriteria(spec, domainClass, query);
@@ -79,7 +84,8 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         return this.entityManager.createQuery(query);
     }
 
-    protected <S extends T> TypedQuery<Double> getAvgQuery(@Nullable Specification<S> spec, Class<S> domainClass, String column){
+    protected <S extends T> TypedQuery<Double> getAvgQuery(
+            @Nullable Specification<S> spec, Class<S> domainClass, String column) {
         CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
         CriteriaQuery<Double> query = builder.createQuery(Double.class);
         Root<S> root = this.applySpecificationToCriteria(spec, domainClass, query);
@@ -88,7 +94,8 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
 
     }
 
-    protected <S extends T> TypedQuery<BigInteger> getMinQuery(@Nullable Specification<S> spec, Class<S> domainClass, String column){
+    protected <S extends T> TypedQuery<BigInteger> getMinQuery(
+            @Nullable Specification<S> spec, Class<S> domainClass, String column) {
         CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
         CriteriaQuery<BigInteger> query = builder.createQuery(BigInteger.class);
         Root<S> root = this.applySpecificationToCriteria(spec, domainClass, query);
@@ -96,7 +103,8 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         return this.entityManager.createQuery(query);
     }
 
-    protected <S extends T> TypedQuery<BigInteger> getMaxQuery(@Nullable Specification<S> spec, Class<S> domainClass, String column){
+    protected <S extends T> TypedQuery<BigInteger> getMaxQuery(
+            @Nullable Specification<S> spec, Class<S> domainClass, String column) {
         CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
         CriteriaQuery<BigInteger> query = builder.createQuery(BigInteger.class);
         Root<S> root = this.applySpecificationToCriteria(spec, domainClass, query);
@@ -122,7 +130,8 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
     @Override
     public <S extends SQLFilter> Page<T> findAll(
             List<S> filters, Pageable pageable, LogicalOperator logicalOperator) {
-        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);;
+        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
+        ;
         return super.findAll(spec, pageable);
     }
 
@@ -181,23 +190,25 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
     }
 
     @Override
-    public <S extends SQLFilter> BigInteger sum(String column, List<S> filters, LogicalOperator logicalOperator) {
+    public <S extends SQLFilter> BigInteger sum(
+            String column, List<S> filters, LogicalOperator logicalOperator) {
         Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
         return getSumQuery(spec, clazz, column).getSingleResult();
     }
 
-     @Override
-     public <S extends SQLFilter> Double avg(String column, S filter) {
-         Specification<T> spec;
-         if (filter instanceof Filter f) spec = DatabaseUtility.createSpecification(f);
-         else if (filter instanceof MultiFilter mf) spec = DatabaseUtility.createSpecification(mf);
-         else throw new RuntimeException("Invalid Filter");
+    @Override
+    public <S extends SQLFilter> Double avg(String column, S filter) {
+        Specification<T> spec;
+        if (filter instanceof Filter f) spec = DatabaseUtility.createSpecification(f);
+        else if (filter instanceof MultiFilter mf) spec = DatabaseUtility.createSpecification(mf);
+        else throw new RuntimeException("Invalid Filter");
         return getAvgQuery(spec, clazz, column).getSingleResult();
     }
 
     @Override
-    public <S extends SQLFilter> Double avg(String column, List<S> filters,
-                                            LogicalOperator logicalOperator
+    public <S extends SQLFilter> Double avg(
+            String column, List<S> filters,
+            LogicalOperator logicalOperator
     ) {
         Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
         return getAvgQuery(spec, clazz, column).getSingleResult();
@@ -213,8 +224,9 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
     }
 
     @Override
-    public <S extends SQLFilter> BigInteger min(String column, List<S> filters,
-                                                LogicalOperator logicalOperator
+    public <S extends SQLFilter> BigInteger min(
+            String column, List<S> filters,
+            LogicalOperator logicalOperator
     ) {
         Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
         return getMinQuery(spec, clazz, column).getSingleResult();
@@ -231,8 +243,9 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
     }
 
     @Override
-    public <S extends SQLFilter> BigInteger max(String column, List<S> filters,
-                                                LogicalOperator logicalOperator
+    public <S extends SQLFilter> BigInteger max(
+            String column, List<S> filters,
+            LogicalOperator logicalOperator
     ) {
         Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
         return getMaxQuery(spec, clazz, column).getSingleResult();
@@ -275,7 +288,9 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         CriteriaBuilder criteriaBuilder = this.entityManager.getCriteriaBuilder();
         CriteriaUpdate<T> criteriaUpdate = criteriaBuilder.createCriteriaUpdate(this.clazz);
         Root<T> root = criteriaUpdate.from(this.clazz);
-        Predicate predicate = createSpecificationHelper(filters, logicalOperator).toPredicate(root, null, criteriaBuilder);
+        Predicate predicate = createSpecificationHelper(filters, logicalOperator).toPredicate(root,
+                                                                                              null,
+                                                                                              criteriaBuilder);
         criteriaUpdate.where(predicate);
         return this.entityManager.createQuery(criteriaUpdate).executeUpdate();
     }
