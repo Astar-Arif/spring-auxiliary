@@ -6,13 +6,14 @@ import jakarta.persistence.Tuple;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.support.JpaRepositoryImplementation;
 
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-public interface BaseRepositoryInterface<T, ID> {
+public interface BaseRepositoryInterface<T, ID> extends JpaRepositoryImplementation<T, ID>{
 
 
     <S extends SQLFilter> List<T> findAll(S filter);
