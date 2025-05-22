@@ -40,10 +40,12 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         this.logger = LoggerFactory.getLogger(clazz);
     }
 
+    // !LogicalOperator will override the SQLFilter combineWithPrevious
     private <S extends SQLFilter> Specification<T> createSpecificationHelper(
             List<S> filters, LogicalOperator logicalOperator) {
         Specification<T> spec = null;
         for (S filter : filters) {
+            if (filter == null) continue;
             Specification<T> currSpec = null;
             if (filter instanceof Filter f) currSpec = DatabaseUtility.createSpecification(f);
             else if (filter instanceof MultiFilter mf)
@@ -51,13 +53,34 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
             else throw new RuntimeException("Invalid Stuff");
             if (spec == null) spec = currSpec;
             else {
-                if (LogicalOperator.AND.equals(logicalOperator)) spec.and(currSpec);
-                else if (LogicalOperator.OR.equals(logicalOperator)) spec.or(currSpec);
+                if (LogicalOperator.AND.equals(logicalOperator)) spec = spec.and(currSpec);
+                else if (LogicalOperator.OR.equals(logicalOperator)) spec = spec.or(currSpec);
                 else throw new RuntimeException("Invalid Logical Operator");
             }
         }
         return spec;
+    }
 
+
+    private <S extends SQLFilter> Specification<T> createSpecificationHelper(List<S> filters) {
+        Specification<T> spec = null;
+        for (S filter : filters) {
+            if (filter == null) continue;
+            Specification<T> currSpec = null;
+            if (filter instanceof Filter f) currSpec = DatabaseUtility.createSpecification(f);
+            else if (filter instanceof MultiFilter mf)
+                currSpec = DatabaseUtility.createSpecification(mf);
+            else throw new RuntimeException("Invalid Stuff");
+            if (spec == null) spec = currSpec;
+            else {
+                LogicalOperator logicalOperator = Optional.ofNullable(
+                        filter.getCombineWithPrevious()).orElse(LogicalOperator.AND);
+                if (LogicalOperator.AND.equals(logicalOperator)) spec = spec.and(currSpec);
+                else if (LogicalOperator.OR.equals(logicalOperator)) spec = spec.or(currSpec);
+                else throw new RuntimeException("Invalid Logical Operator");
+            }
+        }
+        return spec;
     }
 
     private <S, U extends T> Root<U> applySpecificationToCriteria(
@@ -123,9 +146,16 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
     }
 
     @Override
+    public <S extends SQLFilter> Page<T> findAll(List<S> filters, Pageable pageable) {
+        Specification<T> spec = createSpecificationHelper(filters);
+        return super.findAll(spec, pageable);
+    }
+
+    @Override
     public <S extends SQLFilter> List<Tuple> findAll(S filter, Map<String, String> projections) {
         return null;
     }
+
 
     @Override
     public <S extends SQLFilter> Page<T> findAll(
@@ -142,7 +172,12 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         else if (filter instanceof MultiFilter mf) spec = DatabaseUtility.createSpecification(mf);
         else throw new RuntimeException("Invalid Filter");
         return super.findOne(spec);
+    }
 
+    @Override
+    public <S extends SQLFilter> Optional<T> findOne(List<S> filters) {
+        Specification<T> spec = createSpecificationHelper(filters);
+        return super.findOne(spec);
     }
 
     @Override
@@ -160,6 +195,13 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
     }
 
     @Override
+    public <S extends SQLFilter> T findRequiredOne(List<S> filters) throws Exception {
+        Optional<T> optionalT = this.findOne(filters);
+        if (optionalT.isEmpty()) throw new Exception("Throwing this stuff");
+        return optionalT.get();
+    }
+
+    @Override
     public <S extends SQLFilter> T findRequiredOne(
             List<S> filters, LogicalOperator logicalOperator) throws Exception {
         Optional<T> optionalT = this.findOne(filters, logicalOperator);
@@ -170,6 +212,12 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
     @Override
     public <S extends SQLFilter> T findNullableOne(S filter) {
         Optional<T> optionalT = this.findOne(filter);
+        return optionalT.orElse(null);
+    }
+
+    @Override
+    public <S extends SQLFilter> T findNullableOne(List<S> filters) {
+        Optional<T> optionalT = this.findOne(filters);
         return optionalT.orElse(null);
     }
 

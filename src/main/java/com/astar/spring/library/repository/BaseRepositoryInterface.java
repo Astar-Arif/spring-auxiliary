@@ -17,6 +17,8 @@ public interface BaseRepositoryInterface<T, ID> {
 
     <S extends SQLFilter> List<T> findAll(S filter);
 
+    <S extends SQLFilter> Page<T> findAll(List<S> filters, Pageable pageable);
+
     <S extends SQLFilter> List<Tuple> findAll(S filter, Map<String, String> projections);
 
     <S extends SQLFilter> Page<T> findAll(
@@ -26,14 +28,20 @@ public interface BaseRepositoryInterface<T, ID> {
 
     <S extends SQLFilter> Optional<T> findOne(S filter);
 
+    <S extends SQLFilter> Optional<T> findOne(List<S> filters);
+
     <S extends SQLFilter> Optional<T> findOne(List<S> filters, LogicalOperator logicalOperator);
 
     <S extends SQLFilter> T findRequiredOne(S filter) throws Exception;
+
+    <S extends SQLFilter> T findRequiredOne(List<S> filter) throws Exception;
 
     <S extends SQLFilter> T findRequiredOne(
             List<S> filters, LogicalOperator logicalOperator) throws Exception;
 
     <S extends SQLFilter> T findNullableOne(S filter);
+
+    <S extends SQLFilter> T findNullableOne(List<S> filter);
 
     <S extends SQLFilter> T findNullableOne(List<S> filters, LogicalOperator logicalOperator);
 

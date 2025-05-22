@@ -12,6 +12,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.AbstractPersistable;
 
 import java.io.Serializable;
+import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -77,5 +78,11 @@ public abstract class BaseEntity<ID extends Serializable> extends AbstractPersis
         if (this.modifiedDate == null) {
             this.modifiedDate = LocalDateTime.now();  // Set modification date on updates
         }
+    }
+
+    public Object get(String fieldStr) throws NoSuchFieldException, IllegalAccessException {
+        Field field = getClass().getDeclaredField(fieldStr);
+        field.setAccessible(true);
+        return field.get(this);
     }
 }

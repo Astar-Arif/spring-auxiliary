@@ -1,13 +1,13 @@
 package com.astar.spring.library.utils;
 
+import com.astar.common.library.utils.ArrayUtility;
 import com.astar.common.library.utils.ObjectUtility;
 import com.astar.spring.library.enums.LogicalOperator;
 import com.astar.spring.library.enums.SQLOperator;
 import com.astar.spring.library.pojo.Filter;
 import com.astar.spring.library.pojo.MultiFilter;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EntityManager;
+import com.astar.spring.library.pojo.QueryMetadata;
+import jakarta.persistence.*;
 import jakarta.persistence.criteria.*;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.EntityType;
@@ -17,6 +17,9 @@ import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.metamodel.MappingMetamodel;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.persister.entity.SingleTableEntityPersister;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.lang.reflect.Field;
@@ -30,22 +33,64 @@ import java.util.stream.Collectors;
 @SuppressWarnings("unchecked")
 public abstract class DatabaseUtility {
 
-    /**
-     * @param entityManager
-     * @param clazz
-     * @param column
-     * @return
-     */
-    public boolean isColumnUnique(EntityManager entityManager, Class<?> clazz, String column) {
-        Metamodel metamodel = entityManager.getMetamodel();
-        EntityType<?> et = metamodel.entity(clazz);
-        Attribute<?, ?> att = et.getAttribute(column);
-        if (att.getJavaMember() instanceof Field field) {
-            Column col = field.getAnnotation(Column.class);
-            return (col != null && col.unique());
-        } else {
-            return false;
+    public static final Logger LOGGER = LoggerFactory.getLogger(DatabaseUtility.class);
+
+    public static <T> String toSQLString(TypedQuery<T> query) {
+        try {
+            return query.unwrap(org.hibernate.query.Query.class).getQueryString();
+        } catch (Throwable t) {
+            LOGGER.error("Fail to convert to String ", t);
+            return null;
         }
+    }
+
+    public static String toSQLString(Query query) {
+        try {
+            return query.unwrap(org.hibernate.query.Query.class).getQueryString();
+        } catch (Throwable t) {
+            LOGGER.error("Fail to convert to String ", t);
+            return null;
+        }
+    }
+
+
+    public static QueryMetadata<?> convertToQueryMetadata(Object queryResult) {
+        if (queryResult instanceof List<?> list) {
+            return new QueryMetadata<>(list, 1, 1, list.size(), list.size());
+        } else if (queryResult instanceof Page<?> page) {
+            return new QueryMetadata<>(
+                    page,
+                    page.getNumber() + 1,
+                    page.getTotalPages(),
+                    page.getNumberOfElements(),
+                    page.getTotalElements());
+        } else {
+            throw new IllegalArgumentException(
+                    "Unsupported query result type: " + queryResult.getClass());
+        }
+    }
+
+    public static <T> QueryMetadata<List<T>> sliceQueryResult(
+            List<T> queryResult, int pageNumber, int elePerPage) {
+        if (pageNumber < 1 || elePerPage < 1) {
+            throw new IllegalArgumentException(
+                    String.format("Invalid Page Number [%d] or ElePerPage [%d]", pageNumber,
+                                  elePerPage));
+        }
+        int totalSize = queryResult.size();
+        int totalPages = (int) Math.ceil((double) totalSize / elePerPage);
+        // Calculate start and end indices (0-based)
+        int startIndex = (pageNumber - 1) * elePerPage;
+        int endIndex = Math.min(startIndex + elePerPage, totalSize);
+        List<T> pageData;
+        pageData = ArrayUtility.slice(queryResult, startIndex, endIndex);
+        return new QueryMetadata<>(
+                pageData,
+                pageNumber,
+                totalPages,
+                pageData.size(),
+                totalSize
+        );
     }
 
     /**
@@ -416,7 +461,7 @@ public abstract class DatabaseUtility {
         if (!predicates.isEmpty()) {
             LogicalOperator logicalOperator = multiFilter.getOperator();
             Predicate combined;
-            if (logicalOperator.equals(LogicalOperator.OR))
+            if (LogicalOperator.OR.equals(logicalOperator))
                 combined = criteriaBuilder.or(predicates.toArray(new Predicate[0]));
             else combined = criteriaBuilder.and(predicates.toArray(new Predicate[0]));
             if (multiFilter.isNegated()) combined = criteriaBuilder.not(combined);
@@ -433,7 +478,6 @@ public abstract class DatabaseUtility {
     public static <T> Specification<T> createSpecifications(List<Filter> filters) {
         return (root, query, criteriaBuilder) -> createPredicates(criteriaBuilder, root, filters);
     }
-
 
     public static <T> Specification<T> createSpecification(MultiFilter multiFilter) {
         return (root, query, criteriaBuilder) -> createPredicates(criteriaBuilder, root,
@@ -527,11 +571,12 @@ public abstract class DatabaseUtility {
      * @param filter
      * @return
      */
-    private static boolean validateFilter(Filter filter) {
+    public static boolean validateFilter(Filter filter) {
 //        TODO PLAN IF OPERATOR IS IS_NULL OR IS_NOT_NULL
-        return filter.getField() != null && (ObjectUtility.isMatch(filter.getOperator(),
-                                                                   SQLOperator.IS_NULL,
-                                                                   SQLOperator.IS_NOT_NULL) || filter.getValue() != null);
+        return filter != null && filter.getField() != null && (ObjectUtility.isMatch(
+                filter.getOperator(),
+                SQLOperator.IS_NULL,
+                SQLOperator.IS_NOT_NULL) || filter.getValue() != null);
     }
 
     /**
@@ -558,5 +603,23 @@ public abstract class DatabaseUtility {
      */
     private static Predicate helperCreateSubqueryPredicate(Filter filter) {
         return null;
+    }
+
+    /**
+     * @param entityManager
+     * @param clazz
+     * @param column
+     * @return
+     */
+    public boolean isColumnUnique(EntityManager entityManager, Class<?> clazz, String column) {
+        Metamodel metamodel = entityManager.getMetamodel();
+        EntityType<?> et = metamodel.entity(clazz);
+        Attribute<?, ?> att = et.getAttribute(column);
+        if (att.getJavaMember() instanceof Field field) {
+            Column col = field.getAnnotation(Column.class);
+            return (col != null && col.unique());
+        } else {
+            return false;
+        }
     }
 }
