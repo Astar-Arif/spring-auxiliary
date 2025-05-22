@@ -360,8 +360,8 @@ public abstract class DatabaseUtility {
 
 
 //            TODO HANDLE FOR MORE DSA
-            case IN -> path.in((Object[]) filter.getValue());
-            case NOT_IN -> criteriaBuilder.not(path.in((Object[]) filter.getValue()));
+            case IN -> path.in((List<?>) filter.getValue());
+            case NOT_IN -> criteriaBuilder.not(path.in((List<?>)filter.getValue()));
             // TODO Handle this COMPARABLE
             case GREATER_THAN,
                  GREATER_THAN_OR_EQUAL,
