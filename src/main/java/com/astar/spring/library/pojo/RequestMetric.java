@@ -1,13 +1,9 @@
 package com.astar.spring.library.pojo;
 
-import lombok.Getter;
-import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Getter
-@Setter
 public class RequestMetric {
     String requestName;
     List<Throwable> errorList;
@@ -15,6 +11,22 @@ public class RequestMetric {
     public RequestMetric(String requestURI, ArrayList<Throwable> es) {
         this.requestName = requestURI;
         this.errorList = es;
+    }
+
+    public String getRequestName() {
+        return requestName;
+    }
+
+    public void setRequestName(String requestName) {
+        this.requestName = requestName;
+    }
+
+    public List<Throwable> getErrorList() {
+        return errorList;
+    }
+
+    public void setErrorList(List<Throwable> errorList) {
+        this.errorList = errorList;
     }
 
     public void addError(Throwable t) {

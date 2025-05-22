@@ -3,8 +3,6 @@ package com.astar.spring.library;
 import com.astar.common.library.utils.UniqueUtility;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -17,8 +15,6 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @MappedSuperclass
-@Getter
-@Setter
 public abstract class BaseEntity<ID extends Serializable> extends AbstractPersistable<ID> {
 
     private static final String DEFAULT_CREATOR = "SYSTEM";
@@ -84,5 +80,53 @@ public abstract class BaseEntity<ID extends Serializable> extends AbstractPersis
         Field field = getClass().getDeclaredField(fieldStr);
         field.setAccessible(true);
         return field.get(this);
+    }
+
+    public UUID getUuid() {
+        return uuid;
+    }
+
+    public void setUuid(UUID uuid) {
+        this.uuid = uuid;
+    }
+
+    public String getCreatedByID() {
+        return createdByID;
+    }
+
+    public void setCreatedByID(String createdByID) {
+        this.createdByID = createdByID;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public String getModifiedBy() {
+        return modifiedBy;
+    }
+
+    public void setModifiedBy(String modifiedBy) {
+        this.modifiedBy = modifiedBy;
+    }
+
+    public LocalDateTime getModifiedDate() {
+        return modifiedDate;
+    }
+
+    public void setModifiedDate(LocalDateTime modifiedDate) {
+        this.modifiedDate = modifiedDate;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 }

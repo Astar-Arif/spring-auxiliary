@@ -1,11 +1,9 @@
 package com.astar.spring.library.pojo;
 
-import lombok.Getter;
-import lombok.Setter;
+
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
-@Getter
-@Setter
+
 public class PrincipalAuthenticationToken extends UsernamePasswordAuthenticationToken {
     private Integer principalType;
 
@@ -13,5 +11,13 @@ public class PrincipalAuthenticationToken extends UsernamePasswordAuthentication
             Object principal, Object credentials, Integer principleType) {
         super(principal, credentials);
         this.principalType = principleType;
+    }
+
+    public Integer getPrincipalType() {
+        return principalType;
+    }
+
+    public void setPrincipalType(Integer principalType) {
+        this.principalType = principalType;
     }
 }
