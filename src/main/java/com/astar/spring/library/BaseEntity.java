@@ -18,6 +18,7 @@ import java.util.UUID;
 public abstract class BaseEntity<ID extends Serializable> extends AbstractPersistable<ID> {
 
     private static final String DEFAULT_CREATOR = "SYSTEM";
+    public static final int DEFAULT_DB_STRING_LENGTH_LIMIT = 255;
 
     @Column
     private UUID uuid;
