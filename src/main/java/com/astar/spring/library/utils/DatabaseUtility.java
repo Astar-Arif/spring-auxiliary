@@ -2,6 +2,7 @@ package com.astar.spring.library.utils;
 
 import com.astar.common.library.utils.ArrayUtility;
 import com.astar.common.library.utils.ObjectUtility;
+import com.astar.common.library.utils.ParserUtility;
 import com.astar.spring.library.enums.LogicalOperator;
 import com.astar.spring.library.enums.SQLOperator;
 import com.astar.spring.library.pojo.Filter;
@@ -34,15 +35,6 @@ import java.util.stream.Collectors;
 public abstract class DatabaseUtility {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(DatabaseUtility.class);
-
-    public static <T> String toSQLString(TypedQuery<T> query) {
-        try {
-            return query.unwrap(org.hibernate.query.Query.class).getQueryString();
-        } catch (Throwable t) {
-            LOGGER.error("Fail to convert to String ", t);
-            return null;
-        }
-    }
 
     public static String toSQLString(Query query) {
         try {
@@ -191,10 +183,15 @@ public abstract class DatabaseUtility {
 //    TODO TEST ALL THIS
     public static Predicate createPredicate(
             CriteriaBuilder criteriaBuilder, Root<?> root, Filter filter) {
-        if (!validateFilter(filter)) return criteriaBuilder.conjunction();
-        if (filter.getValue() instanceof Subquery<?>) {
-//            TODO HANDLE SUBQUERY
-        }
+        if (!isFilterValid(filter)) return criteriaBuilder.conjunction();
+//        if (filter.getValue() instanceof Subquery<?>) {
+//
+//            return handleSubqueryPredicate(filter);
+//        }
+//        if (filter.getValue() instanceof Query){
+//            return handleQueryPredicate(filter);
+//        }
+        
         Path<?> path = handlePath(root, filter.getField(), filter.getJoinType());
         return switch (filter.getOperator()) {
             case EQUALS -> criteriaBuilder.equal(path, filter.getValue());
@@ -357,11 +354,27 @@ public abstract class DatabaseUtility {
                             criteriaBuilder.literal(filter.getValue())
                     )
             );
-
-
 //            TODO HANDLE FOR MORE DSA
-            case IN -> path.in((List<?>) filter.getValue());
-            case NOT_IN -> criteriaBuilder.not(path.in((List<?>)filter.getValue()));
+            case IN -> {
+                if (filter.getValue() instanceof Collection<?> collection) {
+                    yield path.in(collection);
+                } else if (filter.getValue() instanceof Subquery<?> subquery) {
+                    yield path.in(subquery);
+                }
+//                !filter.getValue will never be null as it is validated
+                Object convertedValue = ParserUtility.parseTo(path.getJavaType(), filter.getValue());
+                yield path.in(convertedValue);
+            }
+            case NOT_IN -> {
+                if (filter.getValue() instanceof Collection<?> collection) {
+                    yield criteriaBuilder.not(path.in(collection));
+                } else if (filter.getValue() instanceof Subquery<?> subquery) {
+                    yield criteriaBuilder.not(path.in(subquery));
+                }
+//                !filter.getValue will never be null as it is validated
+                Object convertedValue = ParserUtility.parseTo(path.getJavaType(), filter.getValue());
+                yield criteriaBuilder.not(path.in(convertedValue));
+            }
             // TODO Handle this COMPARABLE
             case GREATER_THAN,
                  GREATER_THAN_OR_EQUAL,
@@ -379,6 +392,10 @@ public abstract class DatabaseUtility {
                     "Unsupported operator: " + filter.getOperator());
         };
     }
+
+//    private static Predicate handleQueryPredicate(Filter filter) {
+
+//    }
 
     //    TODO MAYBE CHANGE THIS TO EXPRESSION PARAMETER IN THE criteriaBuilder
     private static <T extends Comparable<? super T>> Predicate handleComparablePredicate(
@@ -402,7 +419,7 @@ public abstract class DatabaseUtility {
                     secondVal = (T) pair.getRight();
                 } else if (value instanceof Object[] arr) {
                     firstVal = (T) arr[0];
-                    secondVal = (T) arr[2];
+                    secondVal = (T) arr[1];
                 } else if (value instanceof Collection<?> collection) {
                     Iterator<?> iterator = collection.iterator();
                     firstVal = (T) iterator.next();
@@ -412,7 +429,7 @@ public abstract class DatabaseUtility {
                 if (operator == SQLOperator.NOT_BETWEEN) predicate = predicate.not();
                 yield predicate;
             }
-            //TODO SHOULDN'T REACH
+            //TODO SHOULD BE IMPOSSIBLE CASE
             default -> null;
         };
 
@@ -571,7 +588,7 @@ public abstract class DatabaseUtility {
      * @param filter
      * @return
      */
-    public static boolean validateFilter(Filter filter) {
+    public static boolean isFilterValid(Filter filter) {
 //        TODO PLAN IF OPERATOR IS IS_NULL OR IS_NOT_NULL
         return filter != null && filter.getField() != null && (ObjectUtility.isMatch(
                 filter.getOperator(),
@@ -601,7 +618,7 @@ public abstract class DatabaseUtility {
      * @param filter
      * @return
      */
-    private static Predicate helperCreateSubqueryPredicate(Filter filter) {
+    private static Predicate handleSubqueryPredicate(Filter filter) {
         return null;
     }
 
