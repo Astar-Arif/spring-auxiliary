@@ -9,7 +9,6 @@
         <version>1.0.0</version>
         <relativePath>../../super-pom</relativePath>
     </parent>
-    <!--TODO REPLACE EMOJI JAVA-->
     <artifactId>spring-auxiliary</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
