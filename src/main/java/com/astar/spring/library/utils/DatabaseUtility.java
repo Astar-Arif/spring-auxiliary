@@ -191,7 +191,7 @@ public abstract class DatabaseUtility {
 //        if (filter.getValue() instanceof Query){
 //            return handleQueryPredicate(filter);
 //        }
-        
+
         Path<?> path = handlePath(root, filter.getField(), filter.getJoinType());
         return switch (filter.getOperator()) {
             case EQUALS -> criteriaBuilder.equal(path, filter.getValue());
@@ -362,7 +362,8 @@ public abstract class DatabaseUtility {
                     yield path.in(subquery);
                 }
 //                !filter.getValue will never be null as it is validated
-                Object convertedValue = ParserUtility.parseTo(path.getJavaType(), filter.getValue());
+                Object convertedValue = ParserUtility.parseTo(path.getJavaType(),
+                                                              filter.getValue());
                 yield path.in(convertedValue);
             }
             case NOT_IN -> {
@@ -372,7 +373,8 @@ public abstract class DatabaseUtility {
                     yield criteriaBuilder.not(path.in(subquery));
                 }
 //                !filter.getValue will never be null as it is validated
-                Object convertedValue = ParserUtility.parseTo(path.getJavaType(), filter.getValue());
+                Object convertedValue = ParserUtility.parseTo(path.getJavaType(),
+                                                              filter.getValue());
                 yield criteriaBuilder.not(path.in(convertedValue));
             }
             // TODO Handle this COMPARABLE
@@ -530,6 +532,44 @@ public abstract class DatabaseUtility {
         return null;
     }
 
+    public static <T> Query createNativeQuery(EntityManager em, String query, Class<T> clazz) {
+        return em.createNativeQuery(query, clazz);
+    }
+
+    public static void applyAllParameterValue(
+            TypedQuery<?> query,
+            Map<String, Object> parameter_value
+    ) {
+        for (Map.Entry<String, Object> entry : parameter_value.entrySet()) {
+            applyParameterValue(query, entry.getKey(), entry.getValue());
+        }
+    }
+
+    /**
+     * @param query
+     * @param parameter
+     * @param value
+     */
+    public static void applyParameterValue(
+            TypedQuery<?> query,
+            String parameter,
+            Object value
+    ) {
+        query.setParameter(parameter, value);
+    }
+
+    /**
+     * @param filter
+     * @return
+     */
+    public static boolean isFilterValid(Filter filter) {
+//        TODO PLAN IF OPERATOR IS IS_NULL OR IS_NOT_NULL
+        return filter != null && filter.getField() != null && (ObjectUtility.isMatch(
+                filter.getOperator(),
+                SQLOperator.IS_NULL,
+                SQLOperator.IS_NOT_NULL) || filter.getValue() != null);
+    }
+
     private static boolean validateValue(Object value, SQLOperator operator) {
 //        if value not array and length < 2 return error,
 //        if value not common.lang Pair return error,
@@ -582,18 +622,6 @@ public abstract class DatabaseUtility {
             }
             default -> false;
         };
-    }
-
-    /**
-     * @param filter
-     * @return
-     */
-    public static boolean isFilterValid(Filter filter) {
-//        TODO PLAN IF OPERATOR IS IS_NULL OR IS_NOT_NULL
-        return filter != null && filter.getField() != null && (ObjectUtility.isMatch(
-                filter.getOperator(),
-                SQLOperator.IS_NULL,
-                SQLOperator.IS_NOT_NULL) || filter.getValue() != null);
     }
 
     /**

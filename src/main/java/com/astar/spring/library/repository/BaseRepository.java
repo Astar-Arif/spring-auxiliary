@@ -371,7 +371,8 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
             Object[] queryResult = null;
             if (databaseProductName.contains("PostgreSQL")) {
                 databaseInfoQuery = "SELECT current_database(), current_user, inet_server_addr(), inet_server_port()";
-                queryResult = (Object[]) entityManager.createNativeQuery(databaseInfoQuery).getSingleResult();
+                queryResult = (Object[]) entityManager.createNativeQuery(
+                        databaseInfoQuery).getSingleResult();
                 if (queryResult != null && queryResult.length == 4) {
                     dbName = (String) queryResult[0];
                     dbUser = (String) queryResult[1];
@@ -380,7 +381,8 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
                 }
             } else if (databaseProductName.contains("MySQL")) {
                 databaseInfoQuery = "SELECT DATABASE(), CURRENT_USER(), @@hostname, @@port";
-                queryResult = (Object[]) entityManager.createNativeQuery(databaseInfoQuery).getSingleResult();
+                queryResult = (Object[]) entityManager.createNativeQuery(
+                        databaseInfoQuery).getSingleResult();
                 if (queryResult != null && queryResult.length == 4) {
                     dbName = (String) queryResult[0];
                     dbUser = (String) queryResult[1];
@@ -389,7 +391,8 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
                 }
             } else if (databaseProductName.contains("Oracle")) {
                 databaseInfoQuery = "SELECT SYS_CONTEXT('USERENV', 'DB_NAME'), USER, SYS_CONTEXT('USERENV', 'IP_ADDRESS') FROM DUAL";
-                queryResult = (Object[]) entityManager.createNativeQuery(databaseInfoQuery).getSingleResult();
+                queryResult = (Object[]) entityManager.createNativeQuery(
+                        databaseInfoQuery).getSingleResult();
                 if (queryResult != null && queryResult.length == 3) {
                     dbName = (String) queryResult[0];
                     dbUser = (String) queryResult[1];
@@ -398,7 +401,8 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
                 }
             } else if (databaseProductName.contains("Microsoft SQL Server")) {
                 databaseInfoQuery = "SELECT DB_NAME(), SUSER_SNAME(), CONVERT(VARCHAR, CONNECTIONPROPERTY('local_net_address')), CONVERT(VARCHAR, CONNECTIONPROPERTY('local_tcp_port'))";
-                queryResult = (Object[]) entityManager.createNativeQuery(databaseInfoQuery).getSingleResult();
+                queryResult = (Object[]) entityManager.createNativeQuery(
+                        databaseInfoQuery).getSingleResult();
                 if (queryResult != null && queryResult.length == 4) {
                     dbName = (String) queryResult[0];
                     dbUser = (String) queryResult[1];
@@ -408,7 +412,8 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
             } else if (databaseProductName.contains("H2")) {
                 // H2: name, user. IP/Port often not applicable for embedded or simple setups.
                 databaseInfoQuery = "SELECT DATABASE(), USER()";
-                queryResult = (Object[]) entityManager.createNativeQuery(databaseInfoQuery).getSingleResult();
+                queryResult = (Object[]) entityManager.createNativeQuery(
+                        databaseInfoQuery).getSingleResult();
                 if (queryResult != null && queryResult.length == 2) {
                     dbName = (String) queryResult[0];
                     dbUser = (String) queryResult[1];
@@ -416,15 +421,18 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
                     dbPort = "N/A (Embedded/Local)";
                 }
             } else {
-                logger.warn("Unsupported database product for dynamic information fetching. Attempting generic query for name.");
+                logger.warn(
+                        "Unsupported database product for dynamic information fetching. Attempting generic query for name.");
                 try {
-                    dbName = (String) entityManager.createNativeQuery("SELECT current_database()").getSingleResult();
+                    dbName = (String) entityManager.createNativeQuery(
+                            "SELECT current_database()").getSingleResult();
                 } catch (Exception e) {
                     logger.warn("Generic current_database() query failed: {}", e.getMessage());
                 }
             }
         } catch (SQLException e) {
-            logger.error("SQL Exception while trying to get database metadata or execute query: {}", e.getMessage(), e);
+            logger.error("SQL Exception while trying to get database metadata or execute query: {}",
+                         e.getMessage(), e);
         } catch (Exception e) {
             logger.error("Error fetching database details dynamically: {}", e.getMessage(), e);
         }

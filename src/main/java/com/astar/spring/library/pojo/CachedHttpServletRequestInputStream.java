@@ -24,7 +24,8 @@ public class CachedHttpServletRequestInputStream extends HttpServletRequestWrapp
 
     @Override
     public BufferedReader getReader() throws IOException {
-        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(this.cachedInputStream);
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(
+                this.cachedInputStream);
         return new BufferedReader(new InputStreamReader(byteArrayInputStream));
     }
 }

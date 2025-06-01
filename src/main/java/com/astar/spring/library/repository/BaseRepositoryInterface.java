@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-public interface BaseRepositoryInterface<T, ID> extends JpaRepositoryImplementation<T, ID>{
+public interface BaseRepositoryInterface<T, ID> extends JpaRepositoryImplementation<T, ID> {
 
 
     <S extends SQLFilter> List<T> findAll(S filter);
