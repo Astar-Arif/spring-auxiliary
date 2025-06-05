@@ -20,17 +20,51 @@ import java.util.stream.Collectors;
 
 public class SQLFactory {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SQLFactory.class);
-
     public static final String SEL = "SELECT";
     public static final String INS = "INSERT INTO";
     public static final String UPD = "UPDATE";
     public static final String DEL = "DELETE";
+    private static final Logger LOGGER = LoggerFactory.getLogger(SQLFactory.class);
+
+    public static SQLFactory.CONDITION createCondition(
+            String column,
+            SQLOperator op,
+            String parameter,
+            Object value,
+            LogicalOperator combineWithPrevious
+    ) {
+        return new SQLFactory.CONDITION(
+                column, op, parameter, value, combineWithPrevious
+        );
+    }
+
+    public static SQLFactory.CONDITIONS createConditions(
+            List<CONDITION> conditionList,
+            LogicalOperator combineWithPrevious
+    ) {
+        return new SQLFactory.CONDITIONS(
+                conditionList, combineWithPrevious
+        );
+
+    }
 
     public static class INSERT {
         private List<SQLFactory.COLUMN> columns = new ArrayList<>();
         private SQLFactory.TABLE table;
         private List<INSERT_VALUE> values = new ArrayList<>();
+
+        public static void main(String[] args) {
+            SQLFactory.INSERT insTest = new SQLFactory.INSERT.Builder()
+                    .table("laugn")
+                    .value(":haha", "TEST ")
+                    .value(":haha1", "TEST 1")
+                    .value(":haha2", "TEST 2")
+                    .value(":haha3", "TEST 3")
+                    .build();
+
+            System.out.println("Test : " + insTest.toString());
+
+        }
 
         public List<COLUMN> getColumns() {
             return columns;
@@ -118,19 +152,6 @@ public class SQLFactory {
                 return this.insert;
             }
         }
-
-        public static void main(String[] args) {
-            SQLFactory.INSERT insTest = new SQLFactory.INSERT.Builder()
-                    .table("laugn")
-                    .value(":haha", "TEST ")
-                    .value(":haha1", "TEST 1")
-                    .value(":haha2", "TEST 2")
-                    .value(":haha3", "TEST 3")
-                    .build();
-
-            System.out.println("Test : " + insTest.toString());
-
-        }
     }
 
     public static class SELECT {
@@ -138,6 +159,43 @@ public class SQLFactory {
         private SQLFactory.TABLE table;
         private List<SQLFactory.CONDITIONS> multiConditions = new ArrayList<>();
         private List<SQLFactory.COLUMN> groups = new ArrayList<>();
+
+        public static void main(String[] args) {
+            SQLFactory.SELECT selTest = new SQLFactory.SELECT.Builder()
+                    .column("haha")
+                    .column("haha1")
+                    .table("laughTable")
+                    .conditions(
+                            SQLFactory.createConditions(
+                                    List.of(
+                                            SQLFactory.createCondition("h1h1", SQLOperator.EQUALS,
+                                                                       ":h1h1", "TypeShii",
+                                                                       LogicalOperator.AND),
+                                            SQLFactory.createCondition("h1h2", SQLOperator.EQUALS,
+                                                                       ":h1h2", "NIGAAAAA",
+                                                                       LogicalOperator.AND)
+                                    ),
+                                    null
+                            ))
+                    .conditions(
+                            SQLFactory.createConditions(
+                                    List.of(
+                                            SQLFactory.createCondition("h1h1", SQLOperator.EQUALS,
+                                                                       ":h1h1", "TypeShii",
+                                                                       LogicalOperator.AND),
+                                            SQLFactory.createCondition("h1h2", SQLOperator.EQUALS,
+                                                                       ":h1h2", "NIGAAAAA",
+                                                                       LogicalOperator.AND)
+                                    ),
+                                    LogicalOperator.OR
+                            ))
+                    .group("haha")
+                    .group("h1h1")
+                    .build();
+
+            System.out.println("Test : " + selTest.toString());
+            System.out.println("Test : \n" + selTest.toPrettyString());
+        }
 
         public List<COLUMN> getColumns() {
             return columns;
@@ -185,49 +243,6 @@ public class SQLFactory {
 
         public void addGroup(String col) {
             this.groups.add(new SQLFactory.COLUMN(col));
-        }
-
-        public static class Builder {
-            private SQLFactory.SELECT sel = new SQLFactory.SELECT();
-
-            public Builder column(SQLFactory.COLUMN col) {
-                this.sel.addColumn(col);
-                return this;
-            }
-
-            public Builder column(String col) {
-                this.sel.addColumn(new SQLFactory.COLUMN(col));
-                return this;
-            }
-
-            public Builder table(SQLFactory.TABLE table) {
-                this.sel.setTable(table);
-                return this;
-            }
-
-            public Builder table(String tableName) {
-                this.sel.setTable(new TABLE(tableName));
-                return this;
-            }
-
-            public Builder conditions(SQLFactory.CONDITIONS conditions) {
-                this.sel.addMultiConditions(conditions);
-                return this;
-            }
-
-            public Builder group(SQLFactory.COLUMN col) {
-                this.sel.addGroup(col);
-                return this;
-            }
-
-            public Builder group(String col) {
-                this.sel.addGroup(col);
-                return this;
-            }
-
-            public SQLFactory.SELECT build() {
-                return this.sel;
-            }
         }
 
         @Override
@@ -312,41 +327,47 @@ public class SQLFactory {
             return b.append(';').toString();
         }
 
-        public static void main(String[] args) {
-            SQLFactory.SELECT selTest = new SQLFactory.SELECT.Builder()
-                    .column("haha")
-                    .column("haha1")
-                    .table("laughTable")
-                    .conditions(
-                            SQLFactory.createConditions(
-                                    List.of(
-                                            SQLFactory.createCondition("h1h1", SQLOperator.EQUALS,
-                                                                       ":h1h1", "TypeShii",
-                                                                       LogicalOperator.AND),
-                                            SQLFactory.createCondition("h1h2", SQLOperator.EQUALS,
-                                                                       ":h1h2", "NIGAAAAA",
-                                                                       LogicalOperator.AND)
-                                    ),
-                                    null
-                            ))
-                    .conditions(
-                            SQLFactory.createConditions(
-                                    List.of(
-                                            SQLFactory.createCondition("h1h1", SQLOperator.EQUALS,
-                                                                       ":h1h1", "TypeShii",
-                                                                       LogicalOperator.AND),
-                                            SQLFactory.createCondition("h1h2", SQLOperator.EQUALS,
-                                                                       ":h1h2", "NIGAAAAA",
-                                                                       LogicalOperator.AND)
-                                    ),
-                                    LogicalOperator.OR
-                            ))
-                    .group("haha")
-                    .group("h1h1")
-                    .build();
+        public static class Builder {
+            private SQLFactory.SELECT sel = new SQLFactory.SELECT();
 
-            System.out.println("Test : " + selTest.toString());
-            System.out.println("Test : \n" + selTest.toPrettyString());
+            public Builder column(SQLFactory.COLUMN col) {
+                this.sel.addColumn(col);
+                return this;
+            }
+
+            public Builder column(String col) {
+                this.sel.addColumn(new SQLFactory.COLUMN(col));
+                return this;
+            }
+
+            public Builder table(SQLFactory.TABLE table) {
+                this.sel.setTable(table);
+                return this;
+            }
+
+            public Builder table(String tableName) {
+                this.sel.setTable(new TABLE(tableName));
+                return this;
+            }
+
+            public Builder conditions(SQLFactory.CONDITIONS conditions) {
+                this.sel.addMultiConditions(conditions);
+                return this;
+            }
+
+            public Builder group(SQLFactory.COLUMN col) {
+                this.sel.addGroup(col);
+                return this;
+            }
+
+            public Builder group(String col) {
+                this.sel.addGroup(col);
+                return this;
+            }
+
+            public SQLFactory.SELECT build() {
+                return this.sel;
+            }
         }
     }
 
@@ -354,6 +375,16 @@ public class SQLFactory {
         private List<SQLFactory.UPDATE_COLUMN> columns = new ArrayList<>();
         private TABLE table;
         private List<SQLFactory.CONDITIONS> multiConditions = new ArrayList<>();
+
+        public static void main(String[] args) {
+            SQLFactory.UPDATE updStatement = new SQLFactory.UPDATE.Builder()
+                    .column(new SQLFactory.UPDATE_COLUMN("Haha", Pair.of(":anjai", "Anjing")))
+                    .column(new SQLFactory.UPDATE_COLUMN("Haha", Pair.of(":anjai", "Anjing")))
+                    .table(new SQLFactory.TABLE("Benchod"))
+                    .build();
+            System.out.println("Test : " + updStatement.toString());
+
+        }
 
         public List<UPDATE_COLUMN> getColumns() {
             return columns;
@@ -405,6 +436,13 @@ public class SQLFactory {
             return b.toString();
         }
 
+        public void addMultiConditions(CONDITIONS conditions) {
+            this.multiConditions.add(conditions);
+        }
+
+        private void addColumn(UPDATE_COLUMN updCol) {
+            this.columns.add(updCol);
+        }
 
         public static class Builder {
             private SQLFactory.UPDATE upd = new SQLFactory.UPDATE();
@@ -430,30 +468,25 @@ public class SQLFactory {
             }
         }
 
-        public void addMultiConditions(CONDITIONS conditions) {
-            this.multiConditions.add(conditions);
-        }
-
-        private void addColumn(UPDATE_COLUMN updCol) {
-            this.columns.add(updCol);
-        }
-
-        public static void main(String[] args) {
-            SQLFactory.UPDATE updStatement = new SQLFactory.UPDATE.Builder()
-                    .column(new SQLFactory.UPDATE_COLUMN("Haha", Pair.of(":anjai", "Anjing")))
-                    .column(new SQLFactory.UPDATE_COLUMN("Haha", Pair.of(":anjai", "Anjing")))
-                    .table(new SQLFactory.TABLE("Benchod"))
-                    .build();
-            System.out.println("Test : " + updStatement.toString());
-
-        }
-
 
     }
 
     public static class DELETE {
         private SQLFactory.TABLE table;
         private List<CONDITIONS> multiConditions = new ArrayList<>();
+
+        public static void main(String[] args) {
+            SQLFactory.DELETE del = new SQLFactory.DELETE.Builder()
+                    .table("HOHO")
+                    .conditions(SQLFactory.createConditions(
+                            List.of(
+                                    SQLFactory.createCondition("hihi", SQLOperator.EQUALS, ":hihi",
+                                                               "Nah Fuck That",
+                                                               LogicalOperator.OR)),
+                            LogicalOperator.AND))
+                    .build();
+            System.out.println("Test : " + del.toString());
+        }
 
         public TABLE getTable() {
             return table;
@@ -477,6 +510,25 @@ public class SQLFactory {
             this.multiConditions.add(conditions);
         }
 
+        @Override
+        public String toString() {
+            StringBuilder b = new StringBuilder();
+            b.append(SQLFactory.DEL).append(' ');
+            b.append("FROM").append(' ');
+            b.append(this.table.toString());
+            if (!this.multiConditions.isEmpty()) {
+                b.append("WHERE").append(' ');
+                for (int i = 0; i < multiConditions.size(); i++) {
+                    if (i != 0) {
+                        b.append(' ').append(
+                                multiConditions.get(i).getCombineWithPrevious().toString()).append(
+                                ' ');
+                    }
+                    b.append(multiConditions.get(i).toString());
+                }
+            }
+            return b.append(';').toString();
+        }
 
         public static class Builder {
             private SQLFactory.DELETE del = new SQLFactory.DELETE();
@@ -500,60 +552,6 @@ public class SQLFactory {
                 return this.del;
             }
         }
-
-        @Override
-        public String toString() {
-            StringBuilder b = new StringBuilder();
-            b.append(SQLFactory.DEL).append(' ');
-            b.append("FROM").append(' ');
-            b.append(this.table.toString());
-            if (!this.multiConditions.isEmpty()) {
-                b.append("WHERE").append(' ');
-                for (int i = 0; i < multiConditions.size(); i++) {
-                    if (i != 0) {
-                        b.append(' ').append(
-                                multiConditions.get(i).getCombineWithPrevious().toString()).append(
-                                ' ');
-                    }
-                    b.append(multiConditions.get(i).toString());
-                }
-            }
-            return b.append(';').toString();
-        }
-
-        public static void main(String[] args) {
-            SQLFactory.DELETE del = new SQLFactory.DELETE.Builder()
-                    .table("HOHO")
-                    .conditions(SQLFactory.createConditions(
-                            List.of(
-                                    SQLFactory.createCondition("hihi", SQLOperator.EQUALS, ":hihi", "Nah Fuck That", LogicalOperator.OR)),
-                            LogicalOperator.AND))
-                    .build();
-            System.out.println("Test : " + del.toString());
-        }
-    }
-
-
-    public static SQLFactory.CONDITION createCondition(
-            String column,
-            SQLOperator op,
-            String parameter,
-            Object value,
-            LogicalOperator combineWithPrevious
-    ) {
-        return new SQLFactory.CONDITION(
-                column, op, parameter, value, combineWithPrevious
-        );
-    }
-
-    public static SQLFactory.CONDITIONS createConditions(
-            List<CONDITION> conditionList,
-            LogicalOperator combineWithPrevious
-    ) {
-        return new SQLFactory.CONDITIONS(
-                conditionList, combineWithPrevious
-        );
-
     }
 
     public static class INSERT_VALUE {
@@ -792,8 +790,8 @@ public class SQLFactory {
     }
 
     public static class UPDATE_COLUMN {
-        private COLUMN col;
         Pair<String, Object> parameter_Value;
+        private COLUMN col;
 
         public UPDATE_COLUMN(COLUMN col, Pair<String, Object> parameter_Value) {
             this.col = col;
