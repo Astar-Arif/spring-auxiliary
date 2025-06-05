@@ -8,7 +8,10 @@ import com.astar.spring.library.enums.SQLOperator;
 import com.astar.spring.library.pojo.Filter;
 import com.astar.spring.library.pojo.MultiFilter;
 import com.astar.spring.library.pojo.QueryMetadata;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import jakarta.persistence.criteria.*;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.EntityType;
@@ -536,11 +539,12 @@ public abstract class DatabaseUtility {
         return em.createNativeQuery(query, clazz);
     }
 
+
     public static void applyAllParameterValue(
-            TypedQuery<?> query,
-            Map<String, Object> parameter_value
+            Query query,
+            Map<String, Object> parameterValue
     ) {
-        for (Map.Entry<String, Object> entry : parameter_value.entrySet()) {
+        for (Map.Entry<String, Object> entry : parameterValue.entrySet()) {
             applyParameterValue(query, entry.getKey(), entry.getValue());
         }
     }
@@ -551,7 +555,7 @@ public abstract class DatabaseUtility {
      * @param value
      */
     public static void applyParameterValue(
-            TypedQuery<?> query,
+            Query query,
             String parameter,
             Object value
     ) {
