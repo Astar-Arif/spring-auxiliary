@@ -7,7 +7,6 @@ import com.astar.spring.library.enums.SQLOperator;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
-import jakarta.persistence.criteria.JoinType;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +50,7 @@ public class SQLFactory {
 
     public static SQLFactory.JOIN createJoin(
             TABLE joinTable,
-            JoinType joinType,
+            SQLFactory.JOIN_TYPE joinType,
             COLUMN joinColumn,
             SQLOperator joinOperator,
             COLUMN targetColumn
@@ -61,7 +60,7 @@ public class SQLFactory {
 
     public static SQLFactory.JOIN createJoin(
             String joinTable,
-            JoinType joinType,
+            SQLFactory.JOIN_TYPE joinType,
             String joinColumn,
             SQLOperator joinOperator,
             String targetColumn
@@ -277,7 +276,7 @@ public class SQLFactory {
 
         public void addJoins(
                 SQLFactory.TABLE table,
-                JoinType joinType,
+                SQLFactory.JOIN_TYPE joinType,
                 SQLFactory.COLUMN joinColumn,
                 SQLOperator joinOperator,
                 SQLFactory.COLUMN targetColumn){
@@ -794,14 +793,14 @@ public class SQLFactory {
     public static class JOIN {
 
         private TABLE joinTable;
-        private JoinType joinType;
+        private SQLFactory.JOIN_TYPE joinType;
         private COLUMN joinColumn;
         private SQLOperator joinOperator;
         private COLUMN targetColumn;
         //TODO REVAMP
 
         public JOIN(
-                TABLE joinTable, JoinType joinType, COLUMN joinColumn, SQLOperator joinOperator,
+                TABLE joinTable, SQLFactory.JOIN_TYPE joinType, COLUMN joinColumn, SQLOperator joinOperator,
                 COLUMN targetColumn
         ) {
             this.joinTable = joinTable;
@@ -923,5 +922,14 @@ public class SQLFactory {
             if (!StringUtility.isBlank(this.alias)) b.append(this.alias).append(' ');
             return b.toString();
         }
+    }
+    public enum JOIN_TYPE {
+        INNER,
+        LEFT,
+        RIGHT,
+        FULL,
+        CROSS,
+        NATURAL,
+        SELF
     }
 }
