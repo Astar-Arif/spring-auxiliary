@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 
 public class SQLFactory {
 
+
     public static final String SEL = "SELECT";
     public static final String INS = "INSERT INTO";
     public static final String UPD = "UPDATE";
@@ -46,6 +47,32 @@ public class SQLFactory {
                 conditionList, combineWithPrevious
         );
 
+    }
+
+    public static SQLFactory.JOIN createJoin(
+            TABLE joinTable,
+            JoinType joinType,
+            COLUMN joinColumn,
+            SQLOperator joinOperator,
+            COLUMN targetColumn
+    ){
+        return new SQLFactory.JOIN(joinTable, joinType, joinColumn, joinOperator, targetColumn);
+    }
+
+    public static SQLFactory.JOIN createJoin(
+            String joinTable,
+            JoinType joinType,
+            String joinColumn,
+            SQLOperator joinOperator,
+            String targetColumn
+    ){
+        return new SQLFactory.JOIN(
+                new TABLE(joinTable),
+                joinType,
+                new COLUMN(joinColumn),
+                joinOperator,
+                new COLUMN(targetColumn)
+        );
     }
 
     public static class INSERT {
@@ -120,6 +147,16 @@ public class SQLFactory {
             return b.toString();
         }
 
+        public Query toQuery(EntityManager em) {
+            String sql = this.toString();
+            Query q = em.createQuery(sql);
+            for (SQLFactory.INSERT_VALUE value: values) {
+                q.setParameter(value.getParameter(), value.getValue());
+            }
+            return q;
+        }
+
+
         public static class Builder {
             private SQLFactory.INSERT insert = new SQLFactory.INSERT();
 
@@ -159,6 +196,7 @@ public class SQLFactory {
         private SQLFactory.TABLE table;
         private List<SQLFactory.CONDITIONS> multiConditions = new ArrayList<>();
         private List<SQLFactory.COLUMN> groups = new ArrayList<>();
+        private List<SQLFactory.JOIN> joins = new ArrayList<>();
 
         public static void main(String[] args) {
             SQLFactory.SELECT selTest = new SQLFactory.SELECT.Builder()
@@ -237,6 +275,21 @@ public class SQLFactory {
             this.multiConditions.add(conditions);
         }
 
+        public void addJoins(
+                SQLFactory.TABLE table,
+                JoinType joinType,
+                SQLFactory.COLUMN joinColumn,
+                SQLOperator joinOperator,
+                SQLFactory.COLUMN targetColumn){
+            joins.add(new SQLFactory.JOIN(
+                    table,
+                    joinType,
+                    joinColumn,
+                    joinOperator,
+                    targetColumn
+            ));
+        }
+
         public void addGroup(SQLFactory.COLUMN col) {
             this.groups.add(col);
         }
@@ -261,6 +314,12 @@ public class SQLFactory {
                                 ' ');
                     }
                     b.append(multiConditions.get(i).toString());
+                }
+            }
+            if (!this.joins.isEmpty()){
+                for (JOIN join : joins) {
+                    b.append(' ');
+                    b.append(join.toString());
                 }
             }
             if (!this.groups.isEmpty()) {
@@ -733,13 +792,26 @@ public class SQLFactory {
     }
 
     public static class JOIN {
-        private JoinType joinType;
+
         private TABLE joinTable;
+        private JoinType joinType;
         private COLUMN joinColumn;
         private SQLOperator joinOperator;
         private COLUMN targetColumn;
-
         //TODO REVAMP
+
+        public JOIN(
+                TABLE joinTable, JoinType joinType, COLUMN joinColumn, SQLOperator joinOperator,
+                COLUMN targetColumn
+        ) {
+            this.joinTable = joinTable;
+            this.joinType = joinType;
+            this.joinColumn = joinColumn;
+            this.joinOperator = joinOperator;
+            this.targetColumn = targetColumn;
+        }
+
+
         @Override
         public String toString() {
             StringBuilder b = new StringBuilder();
