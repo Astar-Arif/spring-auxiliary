@@ -1,6 +1,7 @@
 package com.astar.spring.library;
 
 
+import com.astar.common.library.utils.ArrayUtility;
 import com.astar.common.library.utils.StringUtility;
 import com.astar.spring.library.enums.LogicalOperator;
 import com.astar.spring.library.enums.SQLOperator;
@@ -413,6 +414,18 @@ public class SQLFactory {
                 return this;
             }
 
+            public Builder conditions(LogicalOperator combineWithPrevious, SQLFactory.CONDITIONS conditions) {
+                conditions.setCombineWithPrevious(combineWithPrevious);
+                this.sel.addMultiConditions(conditions);
+                return this;
+            }
+
+            public Builder conditions(LogicalOperator combineWithPrevious, SQLFactory.CONDITION... conditions){
+                SQLFactory.CONDITIONS conds = new SQLFactory.CONDITIONS(ArrayUtility.toList(conditions), combineWithPrevious);
+                this.sel.addMultiConditions(conds);
+                return this;
+            }
+
             public Builder group(SQLFactory.COLUMN col) {
                 this.sel.addGroup(col);
                 return this;
@@ -754,6 +767,13 @@ public class SQLFactory {
             this.conditionList = conditionList;
             this.combineWithPrevious = combineWithPrevious;
         }
+        public CONDITIONS(List<CONDITION> conditionList) {
+            this.conditionList = conditionList;
+        }
+        public CONDITIONS(){
+            conditionList = new ArrayList<>();
+
+        }
 
         public List<CONDITION> getConditionList() {
             return conditionList;
@@ -787,6 +807,10 @@ public class SQLFactory {
             }
             b.append(")");
             return b.toString();
+        }
+
+        public static class Construct {
+            private CONDITIONS conditions = new SQLFactory.CONDITIONS();
         }
     }
 
