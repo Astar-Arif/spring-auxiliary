@@ -375,26 +375,20 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
             Object[] queryResult = null;
             boolean isRecognizedDatabaseProduct = true;
 
-            if (databaseProductName.contains("PostgreSQL")) {
-                databaseInfoQuery = "SELECT current_database(), current_user, inet_server_addr(), inet_server_port()";
-            } else if (databaseProductName.contains("MySQL")) {
-                databaseInfoQuery = "SELECT DATABASE(), CURRENT_USER(), @@hostname, @@port";
-            } else if (databaseProductName.contains("Oracle")) {
-                databaseInfoQuery = "SELECT SYS_CONTEXT('USERENV', 'DB_NAME'), USER, SYS_CONTEXT('USERENV', 'IP_ADDRESS'), 'N/A (Oracle port often configured externally)' AS Port FROM DUAL";
-            } else if (databaseProductName.contains("Microsoft SQL Server")) {
-                databaseInfoQuery = "SELECT DB_NAME(), SUSER_SNAME(), CONVERT(VARCHAR, CONNECTIONPROPERTY('local_net_address')), CONVERT(VARCHAR, CONNECTIONPROPERTY('local_tcp_port'))";
-            } else if (databaseProductName.contains("H2")) {
-                databaseInfoQuery = "SELECT DATABASE(), USER(), 'N/A' AS IPADDRESS, 'N/A' AS PORT";
-            } else {
+            Map<String, String> databaseProductQueryMap = Map.of(
+                    "PostgreSQL", "SELECT current_database(), current_user, inet_server_addr(), inet_server_port();",
+                    "MySQL", "SELECT DATABASE(), CURRENT_USER(), @@hostname, @@port;",
+                    "Oracle", "SELECT SYS_CONTEXT('USERENV', 'DB_NAME'), USER, SYS_CONTEXT('USERENV', 'IP_ADDRESS'), 'N/A (Oracle port often configured externally)' AS Port FROM DUAL;",
+                    "Microsoft SQL Server", "SELECT DB_NAME(), SUSER_SNAME(), CONVERT(VARCHAR, CONNECTIONPROPERTY('local_net_address')), CONVERT(VARCHAR, CONNECTIONPROPERTY('local_tcp_port');)",
+                    "H2", "SELECT DATABASE(), USER(), 'N/A' AS IPADDRESS, 'N/A' AS PORT;"
+            );
+
+            databaseInfoQuery = databaseProductQueryMap.get(databaseProductName);
+            if (databaseInfoQuery == null){
                 isRecognizedDatabaseProduct = false;
                 logger.warn(
                         "Unsupported database product for dynamic information fetching. Attempting generic query for name.");
-                try {
-                    dbName = (String) entityManager.createNativeQuery(
-                            "SELECT current_database()").getSingleResult();
-                } catch (Exception e) {
-                    logger.warn("Generic current_database() query failed: {}", e.getMessage());
-                }
+
             }
 
             if (isRecognizedDatabaseProduct) {
@@ -406,6 +400,9 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
                     dbIpAddress = queryResult[2].toString();
                     dbPort = queryResult[3] != null ? queryResult[3].toString() : "N/A";
                 }
+            } else {
+                dbName = (String) entityManager.createNativeQuery(
+                        "SELECT current_database()").getSingleResult();
             }
 
         } catch (SQLException e) {
