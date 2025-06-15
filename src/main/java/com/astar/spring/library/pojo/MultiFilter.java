@@ -8,13 +8,12 @@ import java.util.List;
 
 public final class MultiFilter extends SQLFilter {
     private List<Filter> filters = new ArrayList<>();
-    private LogicalOperator operator;
     private boolean isNegated;
 
-    public MultiFilter(List<Filter> filters, LogicalOperator operator, boolean isNegated) {
+    public MultiFilter(List<Filter> filters, LogicalOperator combineWithPrevious, boolean isNegated) {
         this.filters = filters;
-        this.operator = operator;
         this.isNegated = isNegated;
+        super.setCombineWithPrevious(combineWithPrevious);
     }
 
     public MultiFilter() {
@@ -31,14 +30,6 @@ public final class MultiFilter extends SQLFilter {
 
     public void setFilters(List<Filter> filters) {
         this.filters = filters;
-    }
-
-    public LogicalOperator getOperator() {
-        return operator;
-    }
-
-    public void setOperator(LogicalOperator operator) {
-        this.operator = operator;
     }
 
     public boolean isNegated() {

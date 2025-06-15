@@ -71,13 +71,11 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
             if (filter == null) continue;
             Specification<T> currSpec = null;
             if (filter instanceof Filter f) currSpec = DatabaseUtility.createSpecification(f);
-            else if (filter instanceof MultiFilter mf)
-                currSpec = DatabaseUtility.createSpecification(mf);
+            else if (filter instanceof MultiFilter mf) currSpec = DatabaseUtility.createSpecification(mf);
             else throw new RuntimeException("Invalid Stuff");
             if (spec == null) spec = currSpec;
             else {
-                LogicalOperator logicalOperator = Optional.ofNullable(
-                        filter.getCombineWithPrevious()).orElse(LogicalOperator.AND);
+                LogicalOperator logicalOperator = Optional.ofNullable(filter.getCombineWithPrevious()).orElse(LogicalOperator.AND);
                 if (LogicalOperator.AND.equals(logicalOperator)) spec = spec.and(currSpec);
                 else if (LogicalOperator.OR.equals(logicalOperator)) spec = spec.or(currSpec);
                 else throw new RuntimeException("Invalid Logical Operator");
@@ -145,6 +143,12 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         else if (filter instanceof MultiFilter mf) spec = DatabaseUtility.createSpecification(mf);
         else throw new RuntimeException("Invalid Filter");
 
+        return super.findAll(spec);
+    }
+
+    @Override
+    public <S extends SQLFilter> List<T> findAll(List<S> filters) {
+        Specification<T> spec = createSpecificationHelper(filters);
         return super.findAll(spec);
     }
 

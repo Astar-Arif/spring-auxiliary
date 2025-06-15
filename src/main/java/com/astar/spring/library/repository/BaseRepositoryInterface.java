@@ -18,6 +18,8 @@ public interface BaseRepositoryInterface<T, ID> extends JpaRepositoryImplementat
 
     <S extends SQLFilter> List<T> findAll(S filter);
 
+    <S extends SQLFilter> List<T> findAll(List<S> filters);
+
     <S extends SQLFilter> Page<T> findAll(List<S> filters, Pageable pageable);
 
     <S extends SQLFilter> List<Tuple> findAll(S filter, Map<String, String> projections);

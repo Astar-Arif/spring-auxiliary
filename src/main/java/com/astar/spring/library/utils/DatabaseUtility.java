@@ -194,7 +194,6 @@ public abstract class DatabaseUtility {
 //        if (filter.getValue() instanceof Query){
 //            return handleQueryPredicate(filter);
 //        }
-
         Path<?> path = handlePath(root, filter.getField(), filter.getJoinType());
         return switch (filter.getOperator()) {
             case EQUALS -> criteriaBuilder.equal(path, filter.getValue());
@@ -468,26 +467,23 @@ public abstract class DatabaseUtility {
 
     public static Predicate createPredicates(
             CriteriaBuilder criteriaBuilder, Root<?> root, MultiFilter multiFilter) {
-        List<Predicate> predicates = new ArrayList<>();
+        Predicate predicates = null;
         List<Filter> filters = multiFilter.getFilters();
         if (filters != null && !filters.isEmpty()) {
             for (Filter filter : filters) {
-                Predicate predicate = createPredicate(criteriaBuilder, root, filter);
-                if (predicate != null) {
-                    predicates.add(predicate);
-                }
+                Predicate currPredicate = createPredicate(criteriaBuilder, root, filter);
+                if (predicates == null) predicates = currPredicate;
+                else if (LogicalOperator.OR.equals(filter.getCombineWithPrevious())) 
+                    predicates = criteriaBuilder.or(predicates, currPredicate);
+                else if (LogicalOperator.AND.equals(filter.getCombineWithPrevious()))
+                    predicates = criteriaBuilder.and(predicates, currPredicate);
             }
         } else {
             return criteriaBuilder.conjunction();
         }
-        if (!predicates.isEmpty()) {
-            LogicalOperator logicalOperator = multiFilter.getOperator();
-            Predicate combined;
-            if (LogicalOperator.OR.equals(logicalOperator))
-                combined = criteriaBuilder.or(predicates.toArray(new Predicate[0]));
-            else combined = criteriaBuilder.and(predicates.toArray(new Predicate[0]));
-            if (multiFilter.isNegated()) combined = criteriaBuilder.not(combined);
-            return combined;
+        if (predicates != null) {
+            if (multiFilter.isNegated()) predicates = criteriaBuilder.not(predicates);
+            return predicates;
         }
         return criteriaBuilder.conjunction();
     }
