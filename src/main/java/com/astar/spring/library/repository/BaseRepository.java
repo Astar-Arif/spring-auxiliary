@@ -43,48 +43,44 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         this.logger = LoggerFactory.getLogger(clazz);
     }
 
-    // !LogicalOperator will override the SQLFilter combineWithPrevious
-    private <S extends SQLFilter> Specification<T> createSpecificationHelper(
-            List<S> filters, LogicalOperator logicalOperator) {
-        Specification<T> spec = null;
-        for (S filter : filters) {
-            if (filter == null) continue;
-            Specification<T> currSpec = null;
-            if (filter instanceof Filter f) currSpec = DatabaseUtility.createSpecification(f);
-            else if (filter instanceof MultiFilter mf)
-                currSpec = DatabaseUtility.createSpecification(mf);
-            else throw new RuntimeException("Invalid Stuff");
-            if (spec == null) spec = currSpec;
-            else {
-                if (LogicalOperator.AND.equals(logicalOperator)) spec = spec.and(currSpec);
-                else if (LogicalOperator.OR.equals(logicalOperator)) spec = spec.or(currSpec);
-                else throw new RuntimeException("Invalid Logical Operator");
-            }
-        }
-        return spec;
+    protected <S extends T> TypedQuery<BigInteger> getSumQuery(
+            @Nullable Specification<S> spec, Class<S> domainClass, String column) {
+        CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
+        CriteriaQuery<BigInteger> query = builder.createQuery(BigInteger.class);
+        Root<S> root = this.applySpecificationToCriteriaCopy(spec, domainClass, query);
+        query.select(builder.sum(root.get(column)));
+        return this.entityManager.createQuery(query);
     }
 
+    protected <S extends T> TypedQuery<Double> getAvgQuery(
+            @Nullable Specification<S> spec, Class<S> domainClass, String column) {
+        CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
+        CriteriaQuery<Double> query = builder.createQuery(Double.class);
+        Root<S> root = this.applySpecificationToCriteriaCopy(spec, domainClass, query);
+        query.select(builder.avg(root.get(column)));
+        return this.entityManager.createQuery(query);
 
-    private <S extends SQLFilter> Specification<T> createSpecificationHelper(List<S> filters) {
-        Specification<T> spec = null;
-        for (S filter : filters) {
-            if (filter == null) continue;
-            Specification<T> currSpec = null;
-            if (filter instanceof Filter f) currSpec = DatabaseUtility.createSpecification(f);
-            else if (filter instanceof MultiFilter mf) currSpec = DatabaseUtility.createSpecification(mf);
-            else throw new RuntimeException("Invalid Stuff");
-            if (spec == null) spec = currSpec;
-            else {
-                LogicalOperator logicalOperator = Optional.ofNullable(filter.getCombineWithPrevious()).orElse(LogicalOperator.AND);
-                if (LogicalOperator.AND.equals(logicalOperator)) spec = spec.and(currSpec);
-                else if (LogicalOperator.OR.equals(logicalOperator)) spec = spec.or(currSpec);
-                else throw new RuntimeException("Invalid Logical Operator");
-            }
-        }
-        return spec;
     }
 
-    private <S, U extends T> Root<U> applySpecificationToCriteria(
+    protected <S extends T> TypedQuery<BigInteger> getMinQuery(
+            @Nullable Specification<S> spec, Class<S> domainClass, String column) {
+        CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
+        CriteriaQuery<BigInteger> query = builder.createQuery(BigInteger.class);
+        Root<S> root = this.applySpecificationToCriteriaCopy(spec, domainClass, query);
+        query.select(builder.min(root.get(column)));
+        return this.entityManager.createQuery(query);
+    }
+
+    protected <S extends T> TypedQuery<BigInteger> getMaxQuery(
+            @Nullable Specification<S> spec, Class<S> domainClass, String column) {
+        CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
+        CriteriaQuery<BigInteger> query = builder.createQuery(BigInteger.class);
+        Root<S> root = this.applySpecificationToCriteriaCopy(spec, domainClass, query);
+        query.select(builder.max(root.get(column)));
+        return this.entityManager.createQuery(query);
+    }
+
+    private <S, U extends T> Root<U> applySpecificationToCriteriaCopy(
             @Nullable Specification<U> spec, Class<U> domainClass, CriteriaQuery<S> query) {
         Assert.notNull(domainClass, "Domain class must not be null");
         Assert.notNull(query, "CriteriaQuery must not be null");
@@ -99,42 +95,6 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         return root;
     }
 
-    protected <S extends T> TypedQuery<BigInteger> getSumQuery(
-            @Nullable Specification<S> spec, Class<S> domainClass, String column) {
-        CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
-        CriteriaQuery<BigInteger> query = builder.createQuery(BigInteger.class);
-        Root<S> root = this.applySpecificationToCriteria(spec, domainClass, query);
-        query.select(builder.sum(root.get(column)));
-        return this.entityManager.createQuery(query);
-    }
-
-    protected <S extends T> TypedQuery<Double> getAvgQuery(
-            @Nullable Specification<S> spec, Class<S> domainClass, String column) {
-        CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
-        CriteriaQuery<Double> query = builder.createQuery(Double.class);
-        Root<S> root = this.applySpecificationToCriteria(spec, domainClass, query);
-        query.select(builder.avg(root.get(column)));
-        return this.entityManager.createQuery(query);
-
-    }
-
-    protected <S extends T> TypedQuery<BigInteger> getMinQuery(
-            @Nullable Specification<S> spec, Class<S> domainClass, String column) {
-        CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
-        CriteriaQuery<BigInteger> query = builder.createQuery(BigInteger.class);
-        Root<S> root = this.applySpecificationToCriteria(spec, domainClass, query);
-        query.select(builder.min(root.get(column)));
-        return this.entityManager.createQuery(query);
-    }
-
-    protected <S extends T> TypedQuery<BigInteger> getMaxQuery(
-            @Nullable Specification<S> spec, Class<S> domainClass, String column) {
-        CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
-        CriteriaQuery<BigInteger> query = builder.createQuery(BigInteger.class);
-        Root<S> root = this.applySpecificationToCriteria(spec, domainClass, query);
-        query.select(builder.max(root.get(column)));
-        return this.entityManager.createQuery(query);
-    }
 
     @Override
     public <S extends SQLFilter> List<T> findAll(S filter) {
@@ -142,7 +102,6 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         if (filter instanceof Filter f) spec = DatabaseUtility.createSpecification(f);
         else if (filter instanceof MultiFilter mf) spec = DatabaseUtility.createSpecification(mf);
         else throw new RuntimeException("Invalid Filter");
-
         return super.findAll(spec);
     }
 
@@ -163,14 +122,6 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         return null;
     }
 
-
-    @Override
-    public <S extends SQLFilter> Page<T> findAll(
-            List<S> filters, Pageable pageable, LogicalOperator logicalOperator) {
-        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
-        return super.findAll(spec, pageable);
-    }
-
     @Override
     public <S extends SQLFilter> Optional<T> findOne(S filter) {
         Specification<T> spec;
@@ -186,52 +137,10 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         return super.findOne(spec);
     }
 
+//    TODO IMPLEMENT
     @Override
-    public <S extends SQLFilter> Optional<T> findOne(
-            List<S> filters, LogicalOperator logicalOperator) {
-        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
-        return super.findOne(spec);
-    }
-
-    @Override
-    public <S extends SQLFilter> T findRequiredOne(S filter) throws Exception {
-        Optional<T> optionalT = this.findOne(filter);
-        if (optionalT.isEmpty()) throw new Exception("Throwing this stuff");
-        return optionalT.get();
-    }
-
-    @Override
-    public <S extends SQLFilter> T findRequiredOne(List<S> filters) throws Exception {
-        Optional<T> optionalT = this.findOne(filters);
-        if (optionalT.isEmpty()) throw new Exception("Throwing this stuff");
-        return optionalT.get();
-    }
-
-    @Override
-    public <S extends SQLFilter> T findRequiredOne(
-            List<S> filters, LogicalOperator logicalOperator) throws Exception {
-        Optional<T> optionalT = this.findOne(filters, logicalOperator);
-        if (optionalT.isEmpty()) throw new Exception("Throwing this stuff");
-        return optionalT.get();
-    }
-
-    @Override
-    public <S extends SQLFilter> T findNullableOne(S filter) {
-        Optional<T> optionalT = this.findOne(filter);
-        return optionalT.orElse(null);
-    }
-
-    @Override
-    public <S extends SQLFilter> T findNullableOne(List<S> filters) {
-        Optional<T> optionalT = this.findOne(filters);
-        return optionalT.orElse(null);
-    }
-
-    @Override
-    public <S extends SQLFilter> T findNullableOne(
-            List<S> filters, LogicalOperator logicalOperator) {
-        Optional<T> optionalT = this.findOne(filters, logicalOperator);
-        return optionalT.orElse(null);
+    public <S extends SQLFilter> List<Tuple> findOne(S filter, Map<String, String> projections) {
+        return null;
     }
 
     @Override
@@ -245,8 +154,8 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
 
     @Override
     public <S extends SQLFilter> BigInteger sum(
-            String column, List<S> filters, LogicalOperator logicalOperator) {
-        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
+            String column, List<S> filters) {
+        Specification<T> spec = createSpecificationHelper(filters);
         return getSumQuery(spec, clazz, column).getSingleResult();
     }
 
@@ -260,11 +169,8 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
     }
 
     @Override
-    public <S extends SQLFilter> Double avg(
-            String column, List<S> filters,
-            LogicalOperator logicalOperator
-    ) {
-        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
+    public <S extends SQLFilter> Double avg(String column, List<S> filters) {
+        Specification<T> spec = createSpecificationHelper(filters);
         return getAvgQuery(spec, clazz, column).getSingleResult();
     }
 
@@ -278,11 +184,8 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
     }
 
     @Override
-    public <S extends SQLFilter> BigInteger min(
-            String column, List<S> filters,
-            LogicalOperator logicalOperator
-    ) {
-        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
+    public <S extends SQLFilter> BigInteger min(String column, List<S> filters) {
+        Specification<T> spec = createSpecificationHelper(filters);
         return getMinQuery(spec, clazz, column).getSingleResult();
     }
 
@@ -297,24 +200,39 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
     }
 
     @Override
-    public <S extends SQLFilter> BigInteger max(
-            String column, List<S> filters,
-            LogicalOperator logicalOperator
-    ) {
-        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
+    public <S extends SQLFilter> BigInteger max(String column, List<S> filters) {
+        Specification<T> spec = createSpecificationHelper(filters);
         return getMaxQuery(spec, clazz, column).getSingleResult();
     }
 
     @Override
-    public <S extends SQLFilter> long count(List<S> filters, LogicalOperator logicalOperator) {
-        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
+    public <S extends SQLFilter> long count(List<S> filters) {
+        Specification<T> spec = createSpecificationHelper(filters);
         return super.count(spec);
     }
 
     @Override
-    public <S extends SQLFilter> boolean exists(List<S> filters, LogicalOperator logicalOperator) {
-        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
+    public <S extends SQLFilter> boolean exists(List<S> filters) {
+        Specification<T> spec = createSpecificationHelper(filters);
         return super.exists(spec);
+    }
+
+    @Override
+    @Transactional
+//    TODO: IS NOT SUPPORTING JOIN YET
+    public <S extends SQLFilter> long update(
+            List<S> filters, Map<String, Object> changes, LogicalOperator logicalOperator) {
+        CriteriaBuilder criteriaBuilder = this.entityManager.getCriteriaBuilder();
+        CriteriaUpdate<T> criteriaUpdate = criteriaBuilder.createCriteriaUpdate(this.clazz);
+        Root<T> root = criteriaUpdate.from(this.clazz);
+        for (Map.Entry<String, Object> entry : changes.entrySet()) {
+            criteriaUpdate.set(root.get(entry.getKey()), entry.getValue());
+        }
+        Predicate predicate = createSpecificationHelper(filters).toPredicate(root,
+                                                                             null,
+                                                                             criteriaBuilder);
+        criteriaUpdate.where(predicate);
+        return this.entityManager.createQuery(criteriaUpdate).executeUpdate();
     }
 
     @Override
@@ -330,25 +248,31 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
 
     @Override
     @Transactional
-    public <S extends SQLFilter> long delete(List<S> filters, LogicalOperator logicalOperator) {
-        Specification<T> spec = createSpecificationHelper(filters, logicalOperator);
+    public <S extends SQLFilter> long delete(List<S> filters) {
+        Specification<T> spec = createSpecificationHelper(filters);
         return super.delete(spec);
     }
 
-    @Override
-    @Transactional
-    public <S extends SQLFilter> long update(
-            List<S> filters, Map<String, Object> changes, LogicalOperator logicalOperator) {
-        CriteriaBuilder criteriaBuilder = this.entityManager.getCriteriaBuilder();
-        CriteriaUpdate<T> criteriaUpdate = criteriaBuilder.createCriteriaUpdate(this.clazz);
-        Root<T> root = criteriaUpdate.from(this.clazz);
-        Predicate predicate = createSpecificationHelper(filters, logicalOperator).toPredicate(root,
-                                                                                              null,
-                                                                                              criteriaBuilder);
-        criteriaUpdate.where(predicate);
-        return this.entityManager.createQuery(criteriaUpdate).executeUpdate();
+    private <S extends SQLFilter> Specification<T> createSpecificationHelper(List<S> filters) {
+        Specification<T> spec = null;
+        for (S filter : filters) {
+            if (filter == null) continue;
+            Specification<T> currSpec = null;
+            if (filter instanceof Filter f) currSpec = DatabaseUtility.createSpecification(f);
+            else if (filter instanceof MultiFilter mf)
+                currSpec = DatabaseUtility.createSpecification(mf);
+            else throw new RuntimeException("Invalid Stuff");
+            if (spec == null) spec = currSpec;
+            else {
+                LogicalOperator logicalOperator = Optional.ofNullable(
+                        filter.getCombineWithPrevious()).orElse(LogicalOperator.AND);
+                if (LogicalOperator.AND.equals(logicalOperator)) spec = spec.and(currSpec);
+                else if (LogicalOperator.OR.equals(logicalOperator)) spec = spec.or(currSpec);
+                else throw new RuntimeException("Invalid Logical Operator");
+            }
+        }
+        return Optional.ofNullable(spec).orElse(Specification.where(null));
     }
-
     @Override
     public void getDatabaseInfo() {
         Connection connection = null;
@@ -375,16 +299,19 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
             Object[] queryResult = null;
             boolean isRecognizedDatabaseProduct = true;
 
-            Map<String, String> databaseProductQueryMap = Map.of(
-                    "PostgreSQL", "SELECT current_database(), current_user, inet_server_addr(), inet_server_port();",
-                    "MySQL", "SELECT DATABASE(), CURRENT_USER(), @@hostname, @@port;",
-                    "Oracle", "SELECT SYS_CONTEXT('USERENV', 'DB_NAME'), USER, SYS_CONTEXT('USERENV', 'IP_ADDRESS'), 'N/A (Oracle port often configured externally)' AS Port FROM DUAL;",
-                    "Microsoft SQL Server", "SELECT DB_NAME(), SUSER_SNAME(), CONVERT(VARCHAR, CONNECTIONPROPERTY('local_net_address')), CONVERT(VARCHAR, CONNECTIONPROPERTY('local_tcp_port');)",
-                    "H2", "SELECT DATABASE(), USER(), 'N/A' AS IPADDRESS, 'N/A' AS PORT;"
+            Map<String, String> databaseProductQueryMap = Map.ofEntries(
+                    Map.entry("PostgreSQL",
+                              "SELECT current_database(), current_user, inet_server_addr(), inet_server_port();"),
+                    Map.entry("MySQL", "SELECT DATABASE(), CURRENT_USER(), @@hostname, @@port;"),
+                    Map.entry("Oracle",
+                              "SELECT SYS_CONTEXT('USERENV', 'DB_NAME'), USER, SYS_CONTEXT('USERENV', 'IP_ADDRESS'), 'N/A (Oracle port often configured externally)' AS Port FROM DUAL;"),
+                    Map.entry("Microsoft SQL Server",
+                              "SELECT DB_NAME(), SUSER_SNAME(), CONVERT(VARCHAR, CONNECTIONPROPERTY('local_net_address')), CONVERT(VARCHAR, CONNECTIONPROPERTY('local_tcp_port');"),
+                    Map.entry("H2", "SELECT DATABASE(), USER(), 'N/A' AS IPADDRESS, 'N/A' AS PORT;")
             );
 
             databaseInfoQuery = databaseProductQueryMap.get(databaseProductName);
-            if (databaseInfoQuery == null){
+            if (databaseInfoQuery == null) {
                 isRecognizedDatabaseProduct = false;
                 logger.warn(
                         "Unsupported database product for dynamic information fetching. Attempting generic query for name.");
