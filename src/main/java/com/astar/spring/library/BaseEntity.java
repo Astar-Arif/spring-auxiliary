@@ -11,7 +11,7 @@ import org.springframework.data.jpa.domain.AbstractPersistable;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @MappedSuperclass
@@ -27,19 +27,17 @@ public abstract class BaseEntity<ID extends Serializable> extends AbstractPersis
     private String createdByID;
 
     @CreatedDate
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(nullable = false, updatable = false)
     @JsonIgnore
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @LastModifiedBy
     @JsonIgnore
     private String modifiedBy;
 
     @LastModifiedDate
-    @Temporal(TemporalType.TIMESTAMP)
     @JsonIgnore
-    private LocalDateTime modifiedDate;
+    private Instant modifiedDate;
 
     @Version
     @JsonIgnore
@@ -53,13 +51,13 @@ public abstract class BaseEntity<ID extends Serializable> extends AbstractPersis
             this.createdByID = DEFAULT_CREATOR;
         }
         if (this.createdAt == null) {
-            this.createdAt = LocalDateTime.now();  // Use LocalDateTime.now() for current date
+            this.createdAt = Instant.now();  // Use LocalDateTime.now() for current date
         }
         if (this.modifiedBy == null) {
             this.modifiedBy = DEFAULT_CREATOR;
         }
         if (this.modifiedDate == null) {
-            this.modifiedDate = LocalDateTime.now();  // Use LocalDateTime.now() for current date
+            this.modifiedDate = Instant.now();  // Use LocalDateTime.now() for current date
         }
         if (this.uuid == null) {
             this.uuid = UniqueUtility.generateUUID((byte) 7);
@@ -72,7 +70,7 @@ public abstract class BaseEntity<ID extends Serializable> extends AbstractPersis
             this.modifiedBy = DEFAULT_CREATOR;
         }
         if (this.modifiedDate == null) {
-            this.modifiedDate = LocalDateTime.now();  // Set modification date on updates
+            this.modifiedDate = Instant.now();  // Set modification date on updates
         }
     }
 
@@ -98,11 +96,11 @@ public abstract class BaseEntity<ID extends Serializable> extends AbstractPersis
         this.createdByID = createdByID;
     }
 
-    public LocalDateTime getCreatedAt() {
+    public Instant getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
+    public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
     }
 
@@ -114,11 +112,11 @@ public abstract class BaseEntity<ID extends Serializable> extends AbstractPersis
         this.modifiedBy = modifiedBy;
     }
 
-    public LocalDateTime getModifiedDate() {
+    public Instant getModifiedDate() {
         return modifiedDate;
     }
 
-    public void setModifiedDate(LocalDateTime modifiedDate) {
+    public void setModifiedDate(Instant modifiedDate) {
         this.modifiedDate = modifiedDate;
     }
 
