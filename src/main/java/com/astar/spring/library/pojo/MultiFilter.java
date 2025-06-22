@@ -10,7 +10,8 @@ public final class MultiFilter extends SQLFilter {
     private List<Filter> filters = new ArrayList<>();
     private boolean isNegated;
 
-    public MultiFilter(List<Filter> filters, LogicalOperator combineWithPrevious, boolean isNegated) {
+    public MultiFilter(
+            List<Filter> filters, LogicalOperator combineWithPrevious, boolean isNegated) {
         this.filters = filters;
         this.isNegated = isNegated;
         super.setCombineWithPrevious(combineWithPrevious);

@@ -53,7 +53,7 @@ public final class Filter extends SQLFilter {
         this.value = value;
     }
 
-    public boolean isNegated() {
+    public boolean getIsNegated() {
         return isNegated;
     }
 
@@ -69,6 +69,43 @@ public final class Filter extends SQLFilter {
         this.joinType = joinType;
     }
 
+    public static Filter.Builder init(String field) {
+        Filter.Builder builder = new Filter.Builder();
+        builder.field(field);
+        return builder;
+    }
+
+    public static Filter.Builder and(String field) {
+        Filter.Builder builder = new Filter.Builder();
+        builder.field(field);
+        builder.and();
+        return builder;
+    }
+
+    public static Filter.Builder or(String field) {
+        Filter.Builder builder = new Filter.Builder();
+        builder.field(field);
+        builder.or();
+        return builder;
+    }
+
+
+    public static Filter not(Filter filter) {
+        filter.setNegated(true);
+        return filter;
+    }
+
+    public static void main(String[] args) {
+        Filter fil = Filter.and("Hhahaha").op(SQLOperator.EQUALS, "KKAKKAKKA").build();
+        Filter fil1 = new Filter.Builder()
+                .and()
+                .field("haha")
+                .op(SQLOperator.EQUALS, "KAKA")
+                .build();
+        System.out.print(fil.toString());
+        System.out.print(fil1.toString());
+    }
+
     public static class Builder {
         Filter filter = new Filter();
 
@@ -77,18 +114,8 @@ public final class Filter extends SQLFilter {
             return this;
         }
 
-        public Builder SQLOperator(SQLOperator sqlOperator) {
-            this.filter.setOperator(sqlOperator);
-            return this;
-        }
-
-        public Builder value(Object value) {
-            this.filter.setValue(value);
-            return this;
-        }
-
-        public Builder isNegated(boolean isNegated) {
-            this.filter.setNegated(isNegated);
+        public Builder not() {
+            this.filter.setNegated(!this.filter.isNegated);
             return this;
         }
 
@@ -97,13 +124,23 @@ public final class Filter extends SQLFilter {
             return this;
         }
 
-        public Builder combineWithPrevious(LogicalOperator combine) {
-            this.filter.setCombineWithPrevious(combine);
+        public Builder and() {
+            this.filter.setCombineWithPrevious(LogicalOperator.AND);
+            return this;
+        }
+        public Builder or() {
+            this.filter.setCombineWithPrevious(LogicalOperator.OR);
             return this;
         }
 
         public Filter build() {
             return this.filter;
+        }
+
+        public Builder op(SQLOperator operator, Object value) {
+            this.filter.setOperator(operator);
+            this.filter.setValue(value);
+            return this;
         }
     }
 }

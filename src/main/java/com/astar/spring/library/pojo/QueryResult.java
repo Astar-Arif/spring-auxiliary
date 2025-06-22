@@ -1,16 +1,16 @@
 package com.astar.spring.library.pojo;
 
-public class QueryMetadata<T> {
+public class QueryResult<T> {
     T data;
     int currPage;
     int totalPage;
     long currRowCount;
     long totalRowCount;
 
-    public QueryMetadata() {
+    public QueryResult() {
     }
 
-    public QueryMetadata(
+    public QueryResult(
             T data, int currPage, int totalPage, long currRowCount, long totalRowCount) {
         this.data = data;
         this.currPage = currPage;

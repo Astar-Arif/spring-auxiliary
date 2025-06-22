@@ -1,7 +1,13 @@
 package com.astar.spring.library;
 
+/*
+ * TODO:
+ * * 1. Implement UNION
+ * * 2. Change using string concatenation [str + str]
+ * *
+ * *
+ */
 
-import com.astar.common.library.utils.ArrayUtility;
 import com.astar.common.library.utils.StringUtility;
 import com.astar.spring.library.enums.LogicalOperator;
 import com.astar.spring.library.enums.SQLOperator;
@@ -21,10 +27,11 @@ import java.util.stream.Collectors;
 public class SQLFactory {
 
 
-    public static final String SEL = "SELECT";
-    public static final String INS = "INSERT INTO";
-    public static final String UPD = "UPDATE";
-    public static final String DEL = "DELETE";
+    public static final String OP_SELECT = "SELECT";
+    public static final String OP_INSERT = "INSERT INTO";
+    public static final String OP_UPDATE = "UPDATE";
+    public static final String OP_DELETE = "DELETE";
+
     private static final Logger LOGGER = LoggerFactory.getLogger(SQLFactory.class);
 
     public static SQLFactory.CONDITION createCondition(
@@ -55,7 +62,7 @@ public class SQLFactory {
             COLUMN joinColumn,
             SQLOperator joinOperator,
             COLUMN targetColumn
-    ){
+    ) {
         return new SQLFactory.JOIN(joinTable, joinType, joinColumn, joinOperator, targetColumn);
     }
 
@@ -65,7 +72,7 @@ public class SQLFactory {
             String joinColumn,
             SQLOperator joinOperator,
             String targetColumn
-    ){
+    ) {
         return new SQLFactory.JOIN(
                 new TABLE(joinTable),
                 joinType,
@@ -73,6 +80,16 @@ public class SQLFactory {
                 joinOperator,
                 new COLUMN(targetColumn)
         );
+    }
+
+    public enum JOIN_TYPE {
+        INNER,
+        LEFT,
+        RIGHT,
+        FULL,
+        CROSS,
+        NATURAL,
+        SELF
     }
 
     public static class INSERT {
@@ -128,7 +145,7 @@ public class SQLFactory {
         @Override
         public String toString() {
             StringBuilder b = new StringBuilder();
-            b.append(INS).append(' ');
+            b.append(OP_INSERT).append(' ');
             b.append(table.toString());
             if (!this.columns.isEmpty()) {
                 b.append('(');
@@ -150,7 +167,7 @@ public class SQLFactory {
         public Query toQuery(EntityManager em) {
             String sql = this.toString();
             Query q = em.createQuery(sql);
-            for (SQLFactory.INSERT_VALUE value: values) {
+            for (SQLFactory.INSERT_VALUE value : values) {
                 q.setParameter(value.getParameter(), value.getValue());
             }
             return q;
@@ -191,6 +208,33 @@ public class SQLFactory {
         }
     }
 
+    public static class INSERT_VALUE {
+        private String parameter;
+        private Object value;
+
+        public INSERT_VALUE(String parameter, Object value) {
+            this.parameter = parameter;
+            this.value = value;
+        }
+
+        public String getParameter() {
+            return parameter;
+        }
+
+        public Object getValue() {
+            return value;
+        }
+
+        public void setValue(Object value) {
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return this.parameter;
+        }
+    }
+
     public static class SELECT {
         private List<SQLFactory.COLUMN> columns = new ArrayList<>();
         private SQLFactory.TABLE table;
@@ -200,72 +244,27 @@ public class SQLFactory {
 
         public static void main(String[] args) {
             SQLFactory.SELECT selTest = new SQLFactory.SELECT.Builder()
-                    .column("haha")
-                    .column("haha1")
+                    .columns("haha", "haha1", "babi1")
                     .table("laughTable")
-                    .conditions(
-                            SQLFactory.createConditions(
-                                    List.of(
-                                            SQLFactory.createCondition("h1h1", SQLOperator.EQUALS,
-                                                                       ":h1h1", "TypeShii",
-                                                                       LogicalOperator.AND),
-                                            SQLFactory.createCondition("h1h2", SQLOperator.EQUALS,
-                                                                       ":h1h2", "NIGAAAAA",
-                                                                       LogicalOperator.AND)
-                                    ),
-                                    null
-                            ))
-                    .conditions(
-                            SQLFactory.createConditions(
-                                    List.of(
-                                            SQLFactory.createCondition("h1h1", SQLOperator.EQUALS,
-                                                                       ":h1h1", "TypeShii",
-                                                                       LogicalOperator.AND),
-                                            SQLFactory.createCondition("h1h2", SQLOperator.EQUALS,
-                                                                       ":h1h2", "NIGAAAAA",
-                                                                       LogicalOperator.AND)
-                                    ),
-                                    LogicalOperator.OR
-                            ))
-                    .group("haha")
-                    .group("h1h1")
+                    .conditions(SQLFactory.CONDITIONS
+                                        .init("aaa", SQLOperator.EQUALS, ":aaa", "KAKAKAK")
+                                        .and("aa", SQLOperator.EQUALS, ":aa", "KAKAKAKa")
+                                        .or("baa", SQLOperator.EQUALS, ":aba", "KAKAKAKaaa"))
+                    .conditions(LogicalOperator.AND,
+                                SQLFactory.CONDITIONS
+                                        .init("aaa", SQLOperator.EQUALS, ":aaa", "KAKAKAK")
+                                        .and("aa", SQLOperator.EQUALS, ":aa", "KAKAKAKa")
+                                        .or("baa", SQLOperator.EQUALS, ":aba", "KAKAKAKaaa"))
                     .build();
 
             System.out.println("Test : " + selTest.toString());
             System.out.println("Test : \n" + selTest.toPrettyString());
         }
 
-        public List<COLUMN> getColumns() {
-            return columns;
-        }
-
-        public void setColumns(List<COLUMN> columns) {
-            this.columns = columns;
-        }
-
-        public TABLE getTable() {
-            return table;
-        }
-
         public void setTable(SQLFactory.TABLE table) {
             this.table = table;
         }
 
-        public List<CONDITIONS> getConditions() {
-            return multiConditions;
-        }
-
-        public void setConditions(List<CONDITIONS> conditions) {
-            this.multiConditions = conditions;
-        }
-
-        public List<COLUMN> getGroups() {
-            return groups;
-        }
-
-        public void setGroups(List<COLUMN> groups) {
-            this.groups = groups;
-        }
 
         public void addColumn(SQLFactory.COLUMN col) {
             this.columns.add(col);
@@ -280,7 +279,8 @@ public class SQLFactory {
                 SQLFactory.JOIN_TYPE joinType,
                 SQLFactory.COLUMN joinColumn,
                 SQLOperator joinOperator,
-                SQLFactory.COLUMN targetColumn){
+                SQLFactory.COLUMN targetColumn
+        ) {
             joins.add(new SQLFactory.JOIN(
                     table,
                     joinType,
@@ -301,9 +301,9 @@ public class SQLFactory {
         @Override
         public String toString() {
             StringBuilder b = new StringBuilder();
-            b.append(SQLFactory.SEL).append(' ');
+            b.append(SQLFactory.OP_SELECT).append(' ');
             b.append(this.columns.stream().map(COLUMN::toString).collect(
-                    Collectors.joining(","))).append(' ');
+                    Collectors.joining(", "))).append(' ');
             b.append("FROM").append(' ').append(this.table.toString());
             if (!this.multiConditions.isEmpty()) {
                 b.append("WHERE").append(' ');
@@ -316,7 +316,7 @@ public class SQLFactory {
                     b.append(multiConditions.get(i).toString());
                 }
             }
-            if (!this.joins.isEmpty()){
+            if (!this.joins.isEmpty()) {
                 for (JOIN join : joins) {
                     b.append(' ');
                     b.append(join.toString());
@@ -362,7 +362,7 @@ public class SQLFactory {
 
         public String toPrettyString() {
             StringBuilder b = new StringBuilder();
-            b.append(SQLFactory.SEL).append(' ');
+            b.append(SQLFactory.OP_SELECT).append(' ');
             b.append(this.columns.stream().map(COLUMN::toString).collect(
                     Collectors.joining(","))).append(' ');
             b.append("\nFROM").append("\n\t").append(this.table.toString());
@@ -389,6 +389,10 @@ public class SQLFactory {
         public static class Builder {
             private SQLFactory.SELECT sel = new SQLFactory.SELECT();
 
+            private static class JOIN_STATEMENT {
+
+            }
+
             public Builder column(SQLFactory.COLUMN col) {
                 this.sel.addColumn(col);
                 return this;
@@ -396,6 +400,13 @@ public class SQLFactory {
 
             public Builder column(String col) {
                 this.sel.addColumn(new SQLFactory.COLUMN(col));
+                return this;
+            }
+
+            public Builder columns(String... cols) {
+                for (String col : cols) {
+                    this.sel.addColumn(new COLUMN(col));
+                }
                 return this;
             }
 
@@ -409,20 +420,30 @@ public class SQLFactory {
                 return this;
             }
 
+            //TODO IMPLEMENT
+            public Builder join(String tableName) {
+                return null;
+            }
+
             public Builder conditions(SQLFactory.CONDITIONS conditions) {
                 this.sel.addMultiConditions(conditions);
                 return this;
             }
 
-            public Builder conditions(LogicalOperator combineWithPrevious, SQLFactory.CONDITIONS conditions) {
-                conditions.setCombineWithPrevious(combineWithPrevious);
-                this.sel.addMultiConditions(conditions);
+
+            public Builder conditions(SQLFactory.CONDITION... conditions) {
+                this.sel.addMultiConditions(SQLFactory.createConditions(
+                        List.of(conditions),
+                        null
+                ));
                 return this;
             }
 
-            public Builder conditions(LogicalOperator combineWithPrevious, SQLFactory.CONDITION... conditions){
-                SQLFactory.CONDITIONS conds = new SQLFactory.CONDITIONS(ArrayUtility.toList(conditions), combineWithPrevious);
-                this.sel.addMultiConditions(conds);
+
+            public Builder conditions(
+                    LogicalOperator combineWithPrevious, SQLFactory.CONDITIONS conditions) {
+                conditions.setCombineWithPrevious(combineWithPrevious);
+                this.sel.addMultiConditions(conditions);
                 return this;
             }
 
@@ -452,47 +473,28 @@ public class SQLFactory {
                     .column(new SQLFactory.UPDATE_COLUMN("Haha", Pair.of(":anjai", "Anjing")))
                     .column(new SQLFactory.UPDATE_COLUMN("Haha", Pair.of(":anjai", "Anjing")))
                     .table(new SQLFactory.TABLE("Benchod"))
+                    .conditions(SQLFactory.CONDITIONS
+                                        .init("Haha", SQLOperator.EQUALS, "BABI", "KAKAKA")
+                                        .or("Haha", SQLOperator.EQUALS, "BABI", "KAKAKA"))
                     .build();
             System.out.println("Test : " + updStatement.toString());
 
-        }
-
-        public List<UPDATE_COLUMN> getColumns() {
-            return columns;
-        }
-
-        public void setColumns(List<UPDATE_COLUMN> columns) {
-            this.columns = columns;
-        }
-
-        public TABLE getTable() {
-            return table;
         }
 
         public void setTable(TABLE table) {
             this.table = table;
         }
 
-        public List<CONDITIONS> getMultiConditions() {
-            return multiConditions;
-        }
-
-        public void setMultiConditions(
-                List<CONDITIONS> multiConditions
-        ) {
-            this.multiConditions = multiConditions;
-        }
-
         @Override
         public String toString() {
             StringBuilder b = new StringBuilder();
-            b.append(SQLFactory.UPD).append(' ');
+            b.append(SQLFactory.OP_UPDATE).append(' ');
             b.append(this.table.toString());
             b.append("SET").append(' ');
             b.append(this.columns.stream().map(SQLFactory.UPDATE_COLUMN::toString).collect(
                     Collectors.joining(", ")));
             if (!this.multiConditions.isEmpty()) {
-                b.append("WHERE").append(' ');
+                b.append(' ').append("WHERE").append(' ');
                 for (int i = 0; i < multiConditions.size(); i++) {
                     if (i != 0) {
                         b.append(' ').append(
@@ -504,7 +506,7 @@ public class SQLFactory {
             } else {
                 LOGGER.warn("WARNING, UPDATING { {}} WITHOUT ANY CONDITIONS", this.table);
             }
-            return b.toString();
+            return b.append(';').toString();
         }
 
         public void addMultiConditions(CONDITIONS conditions) {
@@ -540,6 +542,48 @@ public class SQLFactory {
         }
 
 
+    }
+
+    public static class UPDATE_COLUMN {
+        Pair<String, Object> parameter_Value;
+        private COLUMN col;
+
+        public UPDATE_COLUMN(COLUMN col, Pair<String, Object> parameter_Value) {
+            this.col = col;
+            this.parameter_Value = parameter_Value;
+        }
+
+        public UPDATE_COLUMN(String col, Pair<String, Object> parameter_Value) {
+            this.col = new SQLFactory.COLUMN(col);
+            this.parameter_Value = parameter_Value;
+        }
+
+        public COLUMN getCol() {
+            return col;
+        }
+
+        public void setCol(COLUMN col) {
+            this.col = col;
+        }
+
+        public Pair<String, Object> getParameter_Value() {
+            return parameter_Value;
+        }
+
+        public void setParameter_Value(
+                Pair<String, Object> parameter_Value
+        ) {
+            this.parameter_Value = parameter_Value;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder b = new StringBuilder();
+            b.append(this.col.toString());
+            b.append(' ').append('=').append(' ');
+            b.append(this.parameter_Value.getLeft());
+            return b.toString();
+        }
     }
 
     public static class DELETE {
@@ -584,7 +628,7 @@ public class SQLFactory {
         @Override
         public String toString() {
             StringBuilder b = new StringBuilder();
-            b.append(SQLFactory.DEL).append(' ');
+            b.append(SQLFactory.OP_DELETE).append(' ');
             b.append("FROM").append(' ');
             b.append(this.table.toString());
             if (!this.multiConditions.isEmpty()) {
@@ -625,34 +669,40 @@ public class SQLFactory {
         }
     }
 
-    public static class INSERT_VALUE {
-        private String parameter;
-        private Object value;
+    public static class COLUMN {
+        private String alias;
+        private String columnName;
+        private String as;
 
-        public INSERT_VALUE(String parameter, Object value) {
-            this.parameter = parameter;
-            this.value = value;
+        public COLUMN(@Nullable String alias, String columnName, @Nullable String as) {
+            this.alias = alias;
+            this.columnName = columnName;
+            this.as = as;
         }
 
-        public String getParameter() {
-            return parameter;
+        public COLUMN(String columnName) {
+            this.columnName = columnName;
         }
 
-        public void setParameter(String parameter) {
-            this.parameter = parameter;
+        public String getColumnForGroup() {
+            if (this.as != null) return this.as;
+            return this.columnName;
         }
 
-        public Object getValue() {
-            return value;
-        }
-
-        public void setValue(Object value) {
-            this.value = value;
+        public String getColumnForInsert() {
+            StringBuilder b = new StringBuilder();
+            if (!StringUtility.isBlank(this.alias)) b.append(as).append('.');
+            b.append(this.columnName);
+            return b.toString();
         }
 
         @Override
         public String toString() {
-            return this.parameter;
+            StringBuilder b = new StringBuilder();
+            if (!StringUtility.isBlank(this.alias)) b.append(as).append('.');
+            b.append(this.columnName);
+            if (!StringUtility.isBlank(as)) b.append("AS ").append(as);
+            return b.toString();
         }
     }
 
@@ -763,24 +813,43 @@ public class SQLFactory {
         private List<SQLFactory.CONDITION> conditionList;
         private LogicalOperator combineWithPrevious;
 
+
         public CONDITIONS(List<CONDITION> conditionList, LogicalOperator combineWithPrevious) {
             this.conditionList = conditionList;
             this.combineWithPrevious = combineWithPrevious;
         }
+
         public CONDITIONS(List<CONDITION> conditionList) {
             this.conditionList = conditionList;
         }
-        public CONDITIONS(){
-            conditionList = new ArrayList<>();
 
+        public CONDITIONS() {
+            conditionList = new ArrayList<>();
         }
+
+        public static SQLFactory.CONDITIONS init(
+                String col, SQLOperator op, String parameter, Object value) {
+            SQLFactory.CONDITIONS conditions = new SQLFactory.CONDITIONS();
+            conditions.conditionList = new ArrayList<>();
+            conditions.conditionList.add(new CONDITION(col, op, parameter, value, null));
+            return conditions;
+        }
+
+        public SQLFactory.CONDITIONS and(
+                String col, SQLOperator op, String parameter, Object value) {
+            conditionList.add(new CONDITION(col, op, parameter, value, LogicalOperator.AND));
+            return this;
+        }
+
+        public SQLFactory.CONDITIONS or(
+                String col, SQLOperator op, String parameter, Object value) {
+            conditionList.add(new CONDITION(col, op, parameter, value, LogicalOperator.OR));
+            return this;
+        }
+
 
         public List<CONDITION> getConditionList() {
             return conditionList;
-        }
-
-        public void setConditionList(List<CONDITION> conditionList) {
-            this.conditionList = conditionList;
         }
 
         public LogicalOperator getCombineWithPrevious() {
@@ -789,10 +858,6 @@ public class SQLFactory {
 
         public void setCombineWithPrevious(LogicalOperator combineWithPrevious) {
             this.combineWithPrevious = combineWithPrevious;
-        }
-
-        public void addCondition(SQLFactory.CONDITION condition) {
-            this.conditionList.add(condition);
         }
 
         @Override
@@ -808,10 +873,6 @@ public class SQLFactory {
             b.append(")");
             return b.toString();
         }
-
-        public static class Construct {
-            private CONDITIONS conditions = new SQLFactory.CONDITIONS();
-        }
     }
 
     public static class JOIN {
@@ -824,7 +885,8 @@ public class SQLFactory {
         //TODO REVAMP
 
         public JOIN(
-                TABLE joinTable, SQLFactory.JOIN_TYPE joinType, COLUMN joinColumn, SQLOperator joinOperator,
+                TABLE joinTable, SQLFactory.JOIN_TYPE joinType, COLUMN joinColumn,
+                SQLOperator joinOperator,
                 COLUMN targetColumn
         ) {
             this.joinTable = joinTable;
@@ -843,85 +905,6 @@ public class SQLFactory {
             b.append(" ON ").append(joinColumn.toString()).append(' ').append(
                     joinOperator.getSymbol()).append(' ');
             b.append(targetColumn.toString());
-            return b.toString();
-        }
-    }
-
-    public static class COLUMN {
-        private String alias;
-        private String columnName;
-        private String as;
-
-        public COLUMN(@Nullable String alias, String columnName, @Nullable String as) {
-            this.alias = alias;
-            this.columnName = columnName;
-            this.as = as;
-        }
-
-        public COLUMN(String columnName) {
-            this.columnName = columnName;
-        }
-
-        public String getColumnForGroup() {
-            if (this.as != null) return this.as;
-            return this.columnName;
-        }
-
-        public String getColumnForInsert() {
-            StringBuilder b = new StringBuilder();
-            if (!StringUtility.isBlank(this.alias)) b.append(as).append('.');
-            b.append(this.columnName);
-            return b.toString();
-        }
-
-        @Override
-        public String toString() {
-            StringBuilder b = new StringBuilder();
-            if (!StringUtility.isBlank(this.alias)) b.append(as).append('.');
-            b.append(this.columnName);
-            if (!StringUtility.isBlank(as)) b.append("AS ").append(as);
-            return b.toString();
-        }
-    }
-
-    public static class UPDATE_COLUMN {
-        Pair<String, Object> parameter_Value;
-        private COLUMN col;
-
-        public UPDATE_COLUMN(COLUMN col, Pair<String, Object> parameter_Value) {
-            this.col = col;
-            this.parameter_Value = parameter_Value;
-        }
-
-        public UPDATE_COLUMN(String col, Pair<String, Object> parameter_Value) {
-            this.col = new SQLFactory.COLUMN(col);
-            this.parameter_Value = parameter_Value;
-        }
-
-        public COLUMN getCol() {
-            return col;
-        }
-
-        public void setCol(COLUMN col) {
-            this.col = col;
-        }
-
-        public Pair<String, Object> getParameter_Value() {
-            return parameter_Value;
-        }
-
-        public void setParameter_Value(
-                Pair<String, Object> parameter_Value
-        ) {
-            this.parameter_Value = parameter_Value;
-        }
-
-        @Override
-        public String toString() {
-            StringBuilder b = new StringBuilder();
-            b.append(this.col.toString());
-            b.append(' ').append('=').append(' ');
-            b.append(this.parameter_Value.getLeft());
             return b.toString();
         }
     }
@@ -946,14 +929,5 @@ public class SQLFactory {
             if (!StringUtility.isBlank(this.alias)) b.append(this.alias).append(' ');
             return b.toString();
         }
-    }
-    public enum JOIN_TYPE {
-        INNER,
-        LEFT,
-        RIGHT,
-        FULL,
-        CROSS,
-        NATURAL,
-        SELF
     }
 }
