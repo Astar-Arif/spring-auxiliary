@@ -7,12 +7,22 @@ import com.astar.spring.library.enums.LogicalOperator;
 import com.astar.spring.library.enums.SQLOperator;
 import com.astar.spring.library.pojo.Filter;
 import com.astar.spring.library.pojo.MultiFilter;
-import com.astar.spring.library.pojo.QueryMetadata;
+import com.astar.spring.library.pojo.QueryResult;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
-import jakarta.persistence.criteria.*;
+import jakarta.persistence.Tuple;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Path;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Selection;
+import jakarta.persistence.criteria.Subquery;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.Metamodel;
@@ -29,7 +39,7 @@ import org.springframework.data.jpa.domain.Specification;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Collectors;
-//TODO TEST ALL THIS / ADD IMPLEMENTATION / CHECK ERRORS / IMPROVE
+//TODO TEST ALL THIS / ADD IMPLEMENTATION / CHECK ERRORS / IMPROVE / DECIDE TO SEPERATE JOIN
 
 /**
  * The type Database utility.
@@ -39,142 +49,64 @@ public abstract class DatabaseUtility {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(DatabaseUtility.class);
 
-    public static String toSQLString(Query query) {
-        try {
-            return query.unwrap(org.hibernate.query.Query.class).getQueryString();
-        } catch (Throwable t) {
-            LOGGER.error("Fail to convert to String ", t);
-            return null;
+    // TODO
+    public static Selection<Tuple> createSelection(
+            CriteriaBuilder criteriaBuilder, Map<String, String> selects, Root<?> root) {
+        List<Selection<?>> selections = new ArrayList<>();
+        for (Map.Entry<String, String> entry : selects.entrySet()) {
+            selections.add(root.get(entry.getKey()));
         }
+        return criteriaBuilder.tuple(selections.toArray(new Selection[0]));
     }
 
-
-    public static QueryMetadata<?> convertToQueryMetadata(Object queryResult) {
-        if (queryResult instanceof List<?> list) {
-            return new QueryMetadata<>(list, 1, 1, list.size(), list.size());
-        } else if (queryResult instanceof Page<?> page) {
-            return new QueryMetadata<>(
-                    page,
-                    page.getNumber() + 1,
-                    page.getTotalPages(),
-                    page.getNumberOfElements(),
-                    page.getTotalElements());
+    /**
+     * Create predicates predicate.
+     *
+     * @param filters the filters
+     * @return the predicate
+     */
+    public static Predicate createPredicates(
+            CriteriaBuilder criteriaBuilder, Root<?> root, List<Filter> filters) {
+        Predicate predicates = null;
+        if (filters != null && !filters.isEmpty()) {
+            for (Filter filter : filters) {
+                Predicate predicate = createPredicate(criteriaBuilder, root, filter);
+                if (predicates == null) predicates = predicate;
+                else if (LogicalOperator.OR.equals(filter.getCombineWithPrevious()))
+                    predicates = criteriaBuilder.or(predicates, predicate);
+                else predicates = criteriaBuilder.and(predicates, predicate);
+            }
         } else {
-            throw new IllegalArgumentException(
-                    "Unsupported query result type: " + queryResult.getClass());
+            return criteriaBuilder.conjunction();
         }
-    }
-
-    public static <T> QueryMetadata<List<T>> sliceQueryResult(
-            List<T> queryResult, int pageNumber, int elePerPage) {
-        if (pageNumber < 1 || elePerPage < 1) {
-            throw new IllegalArgumentException(
-                    String.format("Invalid Page Number [%d] or ElePerPage [%d]", pageNumber,
-                                  elePerPage));
+        if (predicates != null) {
+            return predicates;
         }
-        int totalSize = queryResult.size();
-        int totalPages = (int) Math.ceil((double) totalSize / elePerPage);
-        // Calculate start and end indices (0-based)
-        int startIndex = (pageNumber - 1) * elePerPage;
-        int endIndex = Math.min(startIndex + elePerPage, totalSize);
-        List<T> pageData;
-        pageData = ArrayUtility.slice(queryResult, startIndex, endIndex);
-        return new QueryMetadata<>(
-                pageData,
-                pageNumber,
-                totalPages,
-                pageData.size(),
-                totalSize
-        );
+        return criteriaBuilder.conjunction();
     }
 
-    /**
-     * Get table name string.
-     *
-     * @param clazz the clazz
-     * @return the string
-     */
-    public static String getTableName(EntityManager entityManager, Class<?> clazz) {
-//        TODO CREATE EXCEPTION ENUMS;
-        if (!isEntity(clazz)) {
-            throw new IllegalArgumentException("Not An Entity");
+
+    public static Predicate createPredicates(
+            CriteriaBuilder criteriaBuilder, Root<?> root, MultiFilter multiFilter) {
+        Predicate predicates = null;
+        List<Filter> filters = multiFilter.getFilters();
+        if (filters != null && !filters.isEmpty()) {
+            for (Filter filter : filters) {
+                Predicate currPredicate = createPredicate(criteriaBuilder, root, filter);
+                if (predicates == null) predicates = currPredicate;
+                else if (LogicalOperator.OR.equals(filter.getCombineWithPrevious()))
+                    predicates = criteriaBuilder.or(predicates, currPredicate);
+                else if (LogicalOperator.AND.equals(filter.getCombineWithPrevious()))
+                    predicates = criteriaBuilder.and(predicates, currPredicate);
+            }
+        } else {
+            return criteriaBuilder.conjunction();
         }
-        SessionFactoryImplementor sessionFactoryImplementor = entityManager.unwrap(
-                SessionFactoryImplementor.class);
-        MappingMetamodel mappingMetamodel = sessionFactoryImplementor.getMappingMetamodel();
-        EntityPersister entityPersister = mappingMetamodel.findEntityDescriptor(clazz);
-        if (entityPersister == null) {
-            throw new IllegalArgumentException("Not An Entity");
+        if (predicates != null) {
+            if (multiFilter.isNegated()) predicates = criteriaBuilder.not(predicates);
+            return predicates;
         }
-        if (entityPersister instanceof SingleTableEntityPersister) {
-            return ((SingleTableEntityPersister) entityPersister).getTableName();
-        }
-        throw new IllegalArgumentException("Unable to find entity name");
-    }
-
-    /**
-     * Is entity boolean.
-     *
-     * @param clazz the clazz
-     * @return the boolean
-     */
-//    TODO TEST THIS
-    public static boolean isEntity(Class<?> clazz) {
-        return clazz.isAnnotationPresent(Entity.class);
-    }
-
-    /**
-     * Get columns set.
-     *
-     * @param clazz the clazz
-     * @return the set
-     */
-    public static Set<String> getColumns(EntityManager entityManager, Class<?> clazz) {
-        if (!isEntity(clazz)) throw new IllegalArgumentException("Not An Entity");
-
-        EntityType<?> entityType = entityManager.getMetamodel().entity(clazz);
-        return entityType
-                .getAttributes()
-                .stream()
-                .map(Attribute::getName)
-                .collect(Collectors.toSet());
-    }
-
-    /**
-     * Has column boolean.
-     *
-     * @param clazz  the clazz
-     * @param column the column
-     * @return the boolean
-     */
-    public static boolean hasColumn(EntityManager entityManager, Class<?> clazz, String column) {
-        Set<String> entityColumns = getColumns(entityManager, clazz);
-        return entityColumns.contains(column);
-    }
-
-    /**
-     * Get entity metadata map.
-     *
-     * @param clazz the clazz
-     * @return the map
-     */
-    public static Map<String, Object> getEntityMetadata(Class<?> clazz) {
-        return null;
-    }
-
-    public static Join<?, ?> createJoins(
-            CriteriaBuilder criteriaBuilder, Root<?> root, String entity) {
-        return null;
-    }
-
-    // TODO
-    public static Selection<?> createSelection() {
-        return null;
-    }
-
-    // TODO
-    public static List<Selection<?>> createSelections() {
-        return null;
+        return criteriaBuilder.conjunction();
     }
 
     /**
@@ -187,17 +119,11 @@ public abstract class DatabaseUtility {
     public static Predicate createPredicate(
             CriteriaBuilder criteriaBuilder, Root<?> root, Filter filter) {
         if (!isFilterValid(filter)) return criteriaBuilder.conjunction();
-//        if (filter.getValue() instanceof Subquery<?>) {
-//
-//            return handleSubqueryPredicate(filter);
-//        }
-//        if (filter.getValue() instanceof Query){
-//            return handleQueryPredicate(filter);
-//        }
-        Path<?> path = handlePath(root, filter.getField(), filter.getJoinType());
-        return switch (filter.getOperator()) {
+        Path<?> path = resolvePath(root, filter.getField(), filter.getJoinType());
+        Predicate predicate = switch (filter.getOperator()) {
             case EQUALS -> criteriaBuilder.equal(path, filter.getValue());
-            case NOT_EQUALS, NOT_EQUALS_ALT -> criteriaBuilder.notEqual(path, filter.getValue());
+            case NOT_EQUALS,
+                 NOT_EQUALS_ALT -> criteriaBuilder.notEqual(path, filter.getValue());
             case LIKE -> criteriaBuilder.like(path.as(String.class), (String) filter.getValue());
             case NOT_LIKE -> criteriaBuilder.not(
                     criteriaBuilder.like(path.as(String.class), (String) filter.getValue()));
@@ -206,7 +132,6 @@ public abstract class DatabaseUtility {
             case NOT_ILIKE -> criteriaBuilder.not(
                     criteriaBuilder.like(criteriaBuilder.lower(path.as(String.class)),
                                          ((String) filter.getValue()).toLowerCase()));
-//            TODO TEST THIS
             case SIMILAR_TO -> criteriaBuilder.isTrue(
                     criteriaBuilder.equal(
                             criteriaBuilder.function("SIMILAR TO", Boolean.class, path,
@@ -223,15 +148,8 @@ public abstract class DatabaseUtility {
                             false
                     )
             );
-            //TODO COMPLETE THIS
             case REGEXP_MATCH -> criteriaBuilder.isTrue(
                     criteriaBuilder.function("REGEXP_MATCH",
-                                             Boolean.class,
-                                             path,
-                                             criteriaBuilder.literal(filter.getValue()))
-            );
-            case REGEXP_NOT_MATCH -> criteriaBuilder.isFalse(
-                    criteriaBuilder.function("REGEXP_NOT_MATCH",
                                              Boolean.class,
                                              path,
                                              criteriaBuilder.literal(filter.getValue()))
@@ -250,7 +168,12 @@ public abstract class DatabaseUtility {
                                              criteriaBuilder.literal(
                                                      ((String) filter.getValue()).toLowerCase()))
             );
-//            TODO COMPLETE THIS
+            case REGEXP_NOT_MATCH -> criteriaBuilder.isFalse(
+                    criteriaBuilder.function("REGEXP_NOT_MATCH",
+                                             Boolean.class,
+                                             path,
+                                             criteriaBuilder.literal(filter.getValue()))
+            );
             case IS_DISTINCT_FROM -> criteriaBuilder.isTrue(
                     criteriaBuilder.function("IS DISTINCT FROM",
                                              Boolean.class,
@@ -265,7 +188,6 @@ public abstract class DatabaseUtility {
                                              criteriaBuilder.literal(
                                                      ((String) filter.getValue()).toLowerCase()))
             );
-//            TODO TEST
             case JSON_FIELD_EXISTS -> {
                 Expression<Boolean> jsonFieldExists = criteriaBuilder.function(
                         "JSON_CONTAINS_PATH",
@@ -303,7 +225,6 @@ public abstract class DatabaseUtility {
                             Boolean.class,
                             path,
                             criteriaBuilder.literal(filter.getValue().toString())
-                            // JSON object/array to check
                     )
             );
             case JSONB_CONTAINED_BY,
@@ -313,7 +234,6 @@ public abstract class DatabaseUtility {
                             Boolean.class,
                             path,
                             criteriaBuilder.literal(filter.getValue().toString())
-                            // JSON object/array to check against
                     )
             );
 
@@ -356,14 +276,12 @@ public abstract class DatabaseUtility {
                             criteriaBuilder.literal(filter.getValue())
                     )
             );
-//            TODO HANDLE FOR MORE DSA
             case IN -> {
                 if (filter.getValue() instanceof Collection<?> collection) {
                     yield path.in(collection);
                 } else if (filter.getValue() instanceof Subquery<?> subquery) {
                     yield path.in(subquery);
                 }
-//                !filter.getValue will never be null as it is validated
                 Object convertedValue = ParserUtility.parseTo(path.getJavaType(),
                                                               filter.getValue());
                 yield path.in(convertedValue);
@@ -374,12 +292,10 @@ public abstract class DatabaseUtility {
                 } else if (filter.getValue() instanceof Subquery<?> subquery) {
                     yield criteriaBuilder.not(path.in(subquery));
                 }
-//                !filter.getValue will never be null as it is validated
                 Object convertedValue = ParserUtility.parseTo(path.getJavaType(),
                                                               filter.getValue());
                 yield criteriaBuilder.not(path.in(convertedValue));
             }
-            // TODO Handle this COMPARABLE
             case GREATER_THAN,
                  GREATER_THAN_OR_EQUAL,
                  LESS_THAN,
@@ -392,14 +308,36 @@ public abstract class DatabaseUtility {
                                                           Comparable.class);
             case IS_NULL -> criteriaBuilder.isNull(path);
             case IS_NOT_NULL -> criteriaBuilder.isNotNull(path);
-            default -> throw new IllegalArgumentException(
-                    "Unsupported operator: " + filter.getOperator());
         };
+        if (filter.getIsNegated()) predicate = criteriaBuilder.not(predicate);
+        return predicate;
     }
 
-//    private static Predicate handleQueryPredicate(Filter filter) {
 
-//    }
+    /**
+     * @param filter
+     * @param <T>
+     * @return
+     */
+    public static <T> Specification<T> createSpecification(Filter filter) {
+        return (root, query, criteriaBuilder) -> createPredicate(criteriaBuilder, root, filter);
+    }
+
+    public static <T> Specification<T> createSpecification(MultiFilter multiFilter) {
+        return (root, query, criteriaBuilder) -> createPredicates(criteriaBuilder, root,
+                                                                  multiFilter);
+    }
+
+    public static Join<?, ?> createJoins(
+            CriteriaBuilder criteriaBuilder, Root<?> root, String entity) {
+        return null;
+    }
+
+    public static <T> Query createNativeQuery(EntityManager em, String query, Class<T> clazz) {
+        return em.createNativeQuery(query, clazz);
+    }
+
+
 
     //    TODO MAYBE CHANGE THIS TO EXPRESSION PARAMETER IN THE criteriaBuilder
     private static <T extends Comparable<? super T>> Predicate handleComparablePredicate(
@@ -436,126 +374,14 @@ public abstract class DatabaseUtility {
             //TODO SHOULD BE IMPOSSIBLE CASE
             default -> null;
         };
-
-    }
-
-    /**
-     * Create predicates predicate.
-     *
-     * @param filters the filters
-     * @return the predicate
-     */
-    public static Predicate createPredicates(
-            CriteriaBuilder criteriaBuilder, Root<?> root, List<Filter> filters) {
-        List<Predicate> predicates = new ArrayList<>();
-        if (filters != null && !filters.isEmpty()) {
-            for (Filter filter : filters) {
-                Predicate predicate = createPredicate(criteriaBuilder, root, filter);
-                if (predicate != null) {
-                    predicates.add(predicate);
-                }
-            }
-        } else {
-            return criteriaBuilder.conjunction();
-        }
-        if (!predicates.isEmpty()) {
-            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
-        } else {
-            return criteriaBuilder.conjunction();
-        }
-    }
-
-    public static Predicate createPredicates(
-            CriteriaBuilder criteriaBuilder, Root<?> root, MultiFilter multiFilter) {
-        Predicate predicates = null;
-        List<Filter> filters = multiFilter.getFilters();
-        if (filters != null && !filters.isEmpty()) {
-            for (Filter filter : filters) {
-                Predicate currPredicate = createPredicate(criteriaBuilder, root, filter);
-                if (predicates == null) predicates = currPredicate;
-                else if (LogicalOperator.OR.equals(filter.getCombineWithPrevious())) 
-                    predicates = criteriaBuilder.or(predicates, currPredicate);
-                else if (LogicalOperator.AND.equals(filter.getCombineWithPrevious()))
-                    predicates = criteriaBuilder.and(predicates, currPredicate);
-            }
-        } else {
-            return criteriaBuilder.conjunction();
-        }
-        if (predicates != null) {
-            if (multiFilter.isNegated()) predicates = criteriaBuilder.not(predicates);
-            return predicates;
-        }
-        return criteriaBuilder.conjunction();
-    }
-
-    /**
-     * @param filters
-     * @param <T>
-     * @return
-     */
-    public static <T> Specification<T> createSpecifications(List<Filter> filters) {
-        return (root, query, criteriaBuilder) -> createPredicates(criteriaBuilder, root, filters);
-    }
-
-    public static <T> Specification<T> createSpecification(MultiFilter multiFilter) {
-        return (root, query, criteriaBuilder) -> createPredicates(criteriaBuilder, root,
-                                                                  multiFilter);
     }
 
     /**
      * @param filter
-     * @param <T>
      * @return
      */
-    public static <T> Specification<T> createSpecification(Filter filter) {
-        return (root, query, criteriaBuilder) -> createPredicate(criteriaBuilder, root, filter);
-    }
-
-    /**
-     * Predicate to string string.
-     *
-     * @param predicate the predicate
-     * @return the string
-     */
-    public static String predicateToString(Predicate predicate) {
+    private static Predicate handleSubqueryPredicate(Filter filter) {
         return null;
-    }
-
-    /**
-     * Filter to predicate string.
-     *
-     * @param filters the filters
-     * @return the string
-     */
-    public static String filterToPredicate(List<Filter> filters) {
-        return null;
-    }
-
-    public static <T> Query createNativeQuery(EntityManager em, String query, Class<T> clazz) {
-        return em.createNativeQuery(query, clazz);
-    }
-
-
-    public static void applyAllParameterValue(
-            Query query,
-            Map<String, Object> parameterValue
-    ) {
-        for (Map.Entry<String, Object> entry : parameterValue.entrySet()) {
-            applyParameterValue(query, entry.getKey(), entry.getValue());
-        }
-    }
-
-    /**
-     * @param query
-     * @param parameter
-     * @param value
-     */
-    public static void applyParameterValue(
-            Query query,
-            String parameter,
-            Object value
-    ) {
-        query.setParameter(parameter, value);
     }
 
     /**
@@ -569,6 +395,27 @@ public abstract class DatabaseUtility {
                 SQLOperator.IS_NULL,
                 SQLOperator.IS_NOT_NULL) || filter.getValue() != null);
     }
+
+
+    /**
+     * @param root
+     * @param field
+     * @return
+     */
+    private static Path<?> resolvePath(Root<?> root, String field, JoinType joinType) {
+        //"as.kk.customer"
+        if (field.contains(".")) {
+            if (joinType == null) joinType = JoinType.INNER;
+            String[] parts = field.split("\\.");
+            From<?, ?> current = root;
+            for (int i = 0; i < parts.length - 1; i++) {
+                current = current.join(parts[i], joinType);
+            }
+            return current.get(parts[parts.length - 1]);
+        }
+        return root.get(field);
+    }
+
 
     private static boolean validateValue(Object value, SQLOperator operator) {
 //        if value not array and length < 2 return error,
@@ -624,30 +471,128 @@ public abstract class DatabaseUtility {
         };
     }
 
-    /**
-     * @param root
-     * @param field
-     * @return
-     */
-    private static Path<?> handlePath(Root<?> root, String field, JoinType joinType) {
-        if (field.contains(".")) {
-            if (joinType == null) joinType = JoinType.INNER;
-            String[] parts = field.split("\\.");
-            From<?, ?> current = root;
-            for (int i = 0; i < parts.length - 1; i++) {
-                current = current.join(parts[i], joinType);
-            }
-            return current.get(parts[parts.length - 1]);
+    public static void applyValuesToParameters(
+            Query query,
+            Map<String, Object> parameterValue
+    ) {
+        for (Map.Entry<String, Object> entry : parameterValue.entrySet()) {
+            applyValueToParameter(query, entry.getKey(), entry.getValue());
         }
-        return root.get(field);
     }
 
     /**
-     * @param filter
-     * @return
+     * @param query
+     * @param parameter
+     * @param value
      */
-    private static Predicate handleSubqueryPredicate(Filter filter) {
+    public static void applyValueToParameter(
+            Query query,
+            String parameter,
+            Object value
+    ) {
+        query.setParameter(parameter, value);
+    }
+
+    public static QueryResult<?> convertToQueryResult(Object queryResult) {
+        if (queryResult instanceof List<?> list) {
+            return new QueryResult<>(list, 1, 1, list.size(), list.size());
+        } else if (queryResult instanceof Page<?> page) {
+            return new QueryResult<>(
+                    page,
+                    page.getNumber() + 1,
+                    page.getTotalPages(),
+                    page.getNumberOfElements(),
+                    page.getTotalElements());
+        } else {
+            throw new IllegalArgumentException(
+                    "Unsupported query result type: " + queryResult.getClass());
+        }
+    }
+
+    public static <T> QueryResult<List<T>> sliceQueryResult(
+            List<T> queryResult, int pageNumber, int elePerPage) {
+        if (pageNumber < 1 || elePerPage < 1) {
+            throw new IllegalArgumentException(
+                    String.format("Invalid Page Number [%d] or ElePerPage [%d]", pageNumber,
+                                  elePerPage));
+        }
+        int totalSize = queryResult.size();
+        int totalPages = (int) Math.ceil((double) totalSize / elePerPage);
+        // Calculate start and end indices (0-based)
+        int startIndex = (pageNumber - 1) * elePerPage;
+        int endIndex = Math.min(startIndex + elePerPage, totalSize);
+        List<T> pageData;
+        pageData = ArrayUtility.slice(queryResult, startIndex, endIndex);
+        return new QueryResult<>(
+                pageData,
+                pageNumber,
+                totalPages,
+                pageData.size(),
+                totalSize
+        );
+    }
+
+    /**
+     * Get table name string.
+     *
+     * @param clazz the clazz
+     * @return the string
+     */
+    public static String getTableName(EntityManager entityManager, Class<?> clazz) {
+//        TODO CREATE EXCEPTION ENUMS;
+        if (!isEntity(clazz)) {
+            throw new IllegalArgumentException("Not An Entity");
+        }
+        SessionFactoryImplementor sessionFactoryImplementor = entityManager.unwrap(
+                SessionFactoryImplementor.class);
+        MappingMetamodel mappingMetamodel = sessionFactoryImplementor.getMappingMetamodel();
+        EntityPersister entityPersister = mappingMetamodel.findEntityDescriptor(clazz);
+        if (entityPersister == null) {
+            throw new IllegalArgumentException("Not An Entity");
+        }
+        if (entityPersister instanceof SingleTableEntityPersister) {
+            return ((SingleTableEntityPersister) entityPersister).getTableName();
+        }
+        throw new IllegalArgumentException("Unable to find entity name");
+    }
+
+    /**
+     * Get columns set.
+     *
+     * @param clazz the clazz
+     * @return the set
+     */
+    public static Set<String> getColumns(EntityManager entityManager, Class<?> clazz) {
+        if (!isEntity(clazz)) throw new IllegalArgumentException("Not An Entity");
+
+        EntityType<?> entityType = entityManager.getMetamodel().entity(clazz);
+        return entityType
+                .getAttributes()
+                .stream()
+                .map(Attribute::getName)
+                .collect(Collectors.toSet());
+    }
+
+    /**
+     * Get entity metadata map.
+     *
+     * @param clazz the clazz
+     * @return the map
+     */
+    public static Map<String, Object> getEntityMetadata(Class<?> clazz) {
         return null;
+    }
+
+    /**
+     * Has column boolean.
+     *
+     * @param clazz  the clazz
+     * @param column the column
+     * @return the boolean
+     */
+    public static boolean hasColumn(EntityManager entityManager, Class<?> clazz, String column) {
+        Set<String> entityColumns = getColumns(entityManager, clazz);
+        return entityColumns.contains(column);
     }
 
     /**
@@ -667,4 +612,25 @@ public abstract class DatabaseUtility {
             return false;
         }
     }
+
+    /**
+     * Is entity boolean.
+     *
+     * @param clazz the clazz
+     * @return the boolean
+     */
+//    TODO TEST THIS
+    public static boolean isEntity(Class<?> clazz) {
+        return clazz.isAnnotationPresent(Entity.class);
+    }
+
+    public static String toSQLString(Query query) {
+        try {
+            return query.unwrap(org.hibernate.query.Query.class).getQueryString();
+        } catch (Exception t) {
+            LOGGER.error("Fail to convert to String ", t);
+            return null;
+        }
+    }
+
 }
