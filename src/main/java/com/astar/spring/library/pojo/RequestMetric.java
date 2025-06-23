@@ -4,6 +4,13 @@ package com.astar.spring.library.pojo;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 1. IP
+ * 2. Time Taken
+ *
+ *
+ *
+ */
 public class RequestMetric {
     String requestName;
     List<Throwable> errorList;

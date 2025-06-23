@@ -1,6 +1,6 @@
 package com.astar.spring.library.pojo;
 
-import com.astar.common.library.utils.JacksonUtility;
+import com.astar.spring.library.utils.JacksonUtility;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import org.slf4j.Logger;

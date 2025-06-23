@@ -15,6 +15,10 @@ import java.util.Optional;
 
 public interface BaseRepositoryInterface<T, ID> extends JpaRepositoryImplementation<T, ID> {
 
+    <S extends SQLFilter> Object query(S filter, String... columns);
+
+    <S extends SQLFilter> List<Tuple> query(String... columns);
+
     <S extends SQLFilter> List<T> findAll(S filter);
 
     <S extends SQLFilter> List<T> findAll(List<S> filters);

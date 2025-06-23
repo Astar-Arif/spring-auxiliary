@@ -49,14 +49,14 @@ public abstract class DatabaseUtility {
 
     public static final Logger LOGGER = LoggerFactory.getLogger(DatabaseUtility.class);
 
-    // TODO
-    public static Selection<Tuple> createSelection(
-            CriteriaBuilder criteriaBuilder, Map<String, String> selects, Root<?> root) {
+    // TODO RETHINK
+    public static List<Selection<?>> createSelection(
+            CriteriaBuilder criteriaBuilder, String[] selects, Root<?> root) {
         List<Selection<?>> selections = new ArrayList<>();
-        for (Map.Entry<String, String> entry : selects.entrySet()) {
-            selections.add(root.get(entry.getKey()));
+        for (int i = 0; i < selects.length; i++){
+            selections.add(root.get(selects[i]));
         }
-        return criteriaBuilder.tuple(selections.toArray(new Selection[0]));
+        return selections;
     }
 
     /**

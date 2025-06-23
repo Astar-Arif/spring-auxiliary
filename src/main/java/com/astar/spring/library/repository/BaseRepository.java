@@ -43,6 +43,30 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         this.logger = LoggerFactory.getLogger(clazz);
     }
 
+//    TODO IMPLEMENT
+    @Override
+    public <S extends SQLFilter> List<Tuple> query(S filter, String... columns) {
+        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Tuple> criteriaQuery = criteriaBuilder.createTupleQuery();
+        Root<T> root = criteriaQuery.from(clazz);
+        List<Selection<?>> selections = DatabaseUtility.createSelection(criteriaBuilder, columns, root);
+        Predicate predicate = createSpecificationHelper(filter).toPredicate(root, criteriaQuery, criteriaBuilder);
+        criteriaQuery.multiselect(selections).where(predicate);
+        TypedQuery<Tuple> query = this.entityManager.createQuery(criteriaQuery);
+        return query.getResultList();
+    }
+
+    @Override
+    public <S extends SQLFilter> List<Tuple> query(String... columns) {
+        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Tuple> criteriaQuery = criteriaBuilder.createTupleQuery();
+        Root<T> root = criteriaQuery.from(clazz);
+        List<Selection<?>> selections = DatabaseUtility.createSelection(criteriaBuilder, columns, root);;
+        criteriaQuery.multiselect(selections);
+        TypedQuery<Tuple> query = this.entityManager.createQuery(criteriaQuery);
+        return query.getResultList();
+    }
+
     protected <S extends T> TypedQuery<BigInteger> getSumQuery(
             @Nullable Specification<S> spec, Class<S> domainClass, String column) {
         CriteriaBuilder builder = this.entityManager.getCriteriaBuilder();
@@ -271,6 +295,14 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
                 else throw new RuntimeException("Invalid Logical Operator");
             }
         }
+        return Optional.ofNullable(spec).orElse(Specification.where(null));
+    }
+
+    private <S extends SQLFilter> Specification<T> createSpecificationHelper(S filter) {
+        Specification<T> spec = null;
+        if (filter instanceof Filter f) spec = DatabaseUtility.createSpecification(f);
+        else if (filter instanceof MultiFilter mf) spec = DatabaseUtility.createSpecification(mf);
+        else throw new RuntimeException("Invalid Stuff");
         return Optional.ofNullable(spec).orElse(Specification.where(null));
     }
     @Override
