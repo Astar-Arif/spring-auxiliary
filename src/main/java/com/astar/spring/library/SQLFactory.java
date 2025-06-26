@@ -27,10 +27,10 @@ import java.util.stream.Collectors;
 public class SQLFactory {
 
 
-    public static final String OP_SELECT = "SELECT";
-    public static final String OP_INSERT = "INSERT INTO";
-    public static final String OP_UPDATE = "UPDATE";
-    public static final String OP_DELETE = "DELETE";
+    private static final String OP_SELECT = "SELECT";
+    private static final String OP_INSERT = "INSERT INTO";
+    private static final String OP_UPDATE = "UPDATE";
+    private static final String OP_DELETE = "DELETE";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SQLFactory.class);
 
@@ -110,24 +110,8 @@ public class SQLFactory {
 
         }
 
-        public List<COLUMN> getColumns() {
-            return columns;
-        }
-
-        public void setColumns(List<COLUMN> columns) {
-            this.columns = columns;
-        }
-
-        public TABLE getTable() {
-            return table;
-        }
-
         public void setTable(TABLE table) {
             this.table = table;
-        }
-
-        public List<INSERT_VALUE> getValues() {
-            return values;
         }
 
         public void setValues(List<INSERT_VALUE> values) {

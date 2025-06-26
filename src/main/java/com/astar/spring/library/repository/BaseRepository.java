@@ -7,6 +7,8 @@ import com.astar.spring.library.pojo.SQLFilter;
 import com.astar.spring.library.utils.DatabaseUtility;
 import jakarta.annotation.Nullable;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
+import jakarta.persistence.Query;
 import jakarta.persistence.Tuple;
 import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -35,7 +37,7 @@ import java.util.Map;
 import java.util.Optional;
 
 //TODO IMPROVE
-public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements BaseRepositoryInterface<T, ID> {
+public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements BaseRepositoryInterface<T,ID> {
     private final EntityManager entityManager;
     private final Class<T> clazz;
     private final Logger logger;
@@ -51,9 +53,9 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
 
     @Override
     public <S extends SQLFilter> List<Tuple> query(String... columns) {
-        CriteriaBuilder criteriaBuilder = entityManager.getCriteriaBuilder();
+        CriteriaBuilder criteriaBuilder = this.entityManager.getCriteriaBuilder();
         CriteriaQuery<Tuple> criteriaQuery = criteriaBuilder.createTupleQuery();
-        Root<T> root = criteriaQuery.from(clazz);
+        Root<T> root = criteriaQuery.from(this.clazz);
         List<Selection<?>> selections = DatabaseUtility.createSelection(criteriaBuilder, columns, root);;
         criteriaQuery.multiselect(selections);
         TypedQuery<Tuple> query = this.entityManager.createQuery(criteriaQuery);
@@ -82,6 +84,28 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         criteriaQuery.multiselect(selections).where(predicate);
         TypedQuery<Tuple> query = this.entityManager.createQuery(criteriaQuery);
         return query.getResultList();
+    }
+
+    @Override
+    public <D> List<D> nativeQueryList(String query, Class<D> clazz) {
+        Query q = entityManager.createNativeQuery(query, clazz);
+        return q.getResultList();
+    }
+
+    @Override
+    public <D> D nativeQueryObject(String query, Class<D> clazz) {
+        Query q = entityManager.createNativeQuery(query, clazz);
+        try {
+            return (D) q.getSingleResult();
+        } catch (NoResultException e) {
+            return null;
+        }
+    }
+
+    @Override
+    public <D> List<D> HQLList(String query, Class<D> clazz) {
+        TypedQuery<D> typedQuery = this.entityManager.createQuery(query, clazz);
+        return typedQuery.getResultList();
     }
 
     protected <S extends T> TypedQuery<BigInteger> getSumQuery(
@@ -298,7 +322,7 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
         Specification<T> spec = null;
         for (S filter : filters) {
             if (filter == null) continue;
-            Specification<T> currSpec = null;
+            Specification<T> currSpec;
             if (filter instanceof Filter f) currSpec = DatabaseUtility.createSpecification(f);
             else if (filter instanceof MultiFilter mf)
                 currSpec = DatabaseUtility.createSpecification(mf);
@@ -316,7 +340,7 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
     }
 
     private <S extends SQLFilter> Specification<T> createSpecificationHelper(S filter) {
-        Specification<T> spec = null;
+        Specification<T> spec;
         if (filter instanceof Filter f) spec = DatabaseUtility.createSpecification(f);
         else if (filter instanceof MultiFilter mf) spec = DatabaseUtility.createSpecification(mf);
         else throw new RuntimeException("Invalid Stuff");

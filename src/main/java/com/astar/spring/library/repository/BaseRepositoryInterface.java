@@ -21,6 +21,12 @@ public interface BaseRepositoryInterface<T, ID> extends JpaRepositoryImplementat
 
     <S extends SQLFilter> List<Tuple> query(List<S> filter, String... columns);
 
+    <D> List<D> nativeQueryList(String query, Class<D> clazz);
+
+    <D> D nativeQueryObject(String query, Class<D> clazz);
+
+    <D> List<D> HQLList(String query, Class<D> clazz);
+
     <S extends SQLFilter> List<T> findAll(S filter);
 
     <S extends SQLFilter> List<T> findAll(List<S> filters);

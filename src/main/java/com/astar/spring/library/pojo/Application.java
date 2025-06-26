@@ -22,7 +22,7 @@ public class Application extends AbstractHttpMessageConverter<Object> {
     public static <T> T decipherRequestBody(HttpServletRequest request, Class<T> clazz)
             throws IOException {
         String requestBody = requestInputStreamToString(request);
-        return JacksonUtility.stringToObject(requestBody, clazz);
+        return JacksonUtility.JSONStringToObject(requestBody, clazz);
     }
 
     public static String requestInputStreamToString(HttpServletRequest request) throws IOException {

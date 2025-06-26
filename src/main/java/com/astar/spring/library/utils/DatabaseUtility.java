@@ -12,7 +12,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
-import jakarta.persistence.Tuple;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
@@ -573,6 +572,7 @@ public abstract class DatabaseUtility {
                 .collect(Collectors.toSet());
     }
 
+    //    TODO IMPLEMENT
     /**
      * Get entity metadata map.
      *
