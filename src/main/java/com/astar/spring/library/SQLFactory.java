@@ -13,10 +13,9 @@ import java.util.stream.Collectors;
 
 // IDEA : GENERATE STRING QUERY ON THE FLY WHEN CALLING ANY BUILDER FUNCTIONS
 public class SQLFactory {
-
+    //TODO IMPLEMENT MULIT COLUMN AGGREGATE FUNCTION
 
     //    C:INSERT, R:SELECT, U:UPDATE, D:DELETE
-    // TODO : IMPLEMENT
     private static final SQLFactory.DATABASE_PRODUCT DATABASE = null;
     private static final String INSERT_OP = "INSERT";
     private static final String SELECT_OP = "SELECT";
@@ -31,7 +30,8 @@ public class SQLFactory {
         private void setTable(TABLE table) {
             this.table = table;
         }
-        public String toStringQuery(){
+
+        public String toStringQuery() {
             StringBuilder c = new StringBuilder();
             StringBuilder v = new StringBuilder();
             c.append(SQLFactory.INSERT_OP).append(" INTO ");
@@ -40,7 +40,7 @@ public class SQLFactory {
                 c.append(" (");
             v.append("VALUES (");
             boolean isFirst = true;
-            for (Pair<SQLFactory.COLUMN, Pair<String, Object>> ele : this.columnParameterValueList){
+            for (Pair<SQLFactory.COLUMN, Pair<String, Object>> ele : this.columnParameterValueList) {
                 SQLFactory.COLUMN col = ele.getLeft();
                 Pair<String, Object> parameterValue = ele.getRight();
                 if (!isFirst) {
@@ -58,37 +58,34 @@ public class SQLFactory {
             return c.append(' ').append(v).append(';').toString();
         }
 
-        public static void main(String[] args) {
-            SQLFactory.INSERT ins = new SQLFactory.INSERT.Builder()
-                    .table("kaka")
-                    .value( ":lka", "asdasd")
-                    .build();
-            System.out.println(ins.toStringQuery());
-        }
         public static class Builder {
             private SQLFactory.INSERT insertPrototype = new SQLFactory.INSERT();
 
-            public Builder table(String table){
+            public Builder table(String table) {
                 this.insertPrototype.setTable(new SQLFactory.TABLE(table));
                 return this;
             }
 
-            public Builder value(String column, String parameter, Object value){
+            public Builder value(String column, String parameter, Object value) {
                 if (!StringUtility.isEmpty(column))
                     this.insertPrototype.isAll = false;
-                this.insertPrototype.columnParameterValueList.add(Pair.of(new SQLFactory.COLUMN(column), Pair.of(parameter, value)));
-                return this;
-            }
-            public Builder value(String parameter, Object value){
-                this.insertPrototype.isAll = true;
-                this.insertPrototype.columnParameterValueList.add(Pair.of(null, Pair.of(parameter, value)));
+                this.insertPrototype.columnParameterValueList.add(
+                        Pair.of(new SQLFactory.COLUMN(column), Pair.of(parameter, value)));
                 return this;
             }
 
-            public SQLFactory.INSERT build(){
+            public Builder value(String parameter, Object value) {
+                this.insertPrototype.isAll = true;
+                this.insertPrototype.columnParameterValueList.add(
+                        Pair.of(null, Pair.of(parameter, value)));
+                return this;
+            }
+
+            public SQLFactory.INSERT build() {
                 return this.insertPrototype;
             }
-            public SQLFactory.INSERT get(){
+
+            public SQLFactory.INSERT get() {
                 return this.insertPrototype;
             }
 
@@ -122,61 +119,6 @@ public class SQLFactory {
 
         private void setTable(SQLFactory.TABLE table) {
             this.table = table;
-        }
-
-        //TODO IMPLEMENT MULIT COLUMN AGGREGATE FUNCTION
-        public static void main(String[] args) {
-            SQLFactory.SELECT sel = new SQLFactory.SELECT.Builder()
-                    .column("haha")
-                    .column("haha1")
-                    .columnAggr(AGGREGATE_FUNCTION.AVG, "arifraihan")
-                    .table("customer")
-                    .conditions(SQLFactory.CONDITIONS
-                                        .init("haha", SQLOperator.EQUALS, Map.of(":haha", "t1123"))
-                                        .and("haha", SQLOperator.EQUALS,
-                                             Map.of(":haha1", "t11231")))
-                    .conditions(LogicalOperator.AND, SQLFactory.CONDITIONS
-                            .init("haha", SQLOperator.EQUALS, Map.of(":ha1ha", "t11223")))
-                    .conditions(LogicalOperator.AND, SQLFactory.CONDITIONS
-                            .init("haha", SQLOperator.EQUALS, Map.of(":ha1ha", "t11223"))
-                            .or("name", SQLOperator.BETWEEN, Map.of("d1", "start", "d2", "end"))
-                            .or("name", SQLOperator.BETWEEN, Map.of("d1", "start", "d2", "end")))
-                    .leftJoin("KAKA", "ll", "lk")
-                    .rightJoin("KAKA", "ll", "lk")
-                    .leftJoin("KAKA", "ll", "lk")
-                    .groupBy("kakaka")
-                    .groupBy("asdasd")
-                    .order("haha", SORT_DIRECTION.ASC)
-                    .order("haha", SORT_DIRECTION.ASC)
-                    .build();
-
-            SQLFactory.SELECT sel1 = new SQLFactory.SELECT.Builder()
-                    .column("haha")
-                    .column("haha1")
-                    .columnAggr(AGGREGATE_FUNCTION.AVG, "arifraihan")
-                    .table("customer")
-                    .conditions(SQLFactory.CONDITIONS
-                                        .init("haha", SQLOperator.EQUALS, Map.of(":haha", "t1123"))
-                                        .and("haha", SQLOperator.EQUALS,
-                                             Map.of(":haha1", "t11231")))
-                    .conditions(LogicalOperator.AND, SQLFactory.CONDITIONS
-                            .init("haha", SQLOperator.EQUALS, Map.of(":ha1ha", "t11223")))
-                    .conditions(LogicalOperator.AND, SQLFactory.CONDITIONS
-                            .init("haha", SQLOperator.EQUALS, Map.of(":ha1ha", "t11223"))
-                            .or("name", SQLOperator.BETWEEN, Map.of("d1", "start", "d2", "end"))
-                            .or("name", SQLOperator.BETWEEN, Map.of("d1", "start", "d2", "end")))
-                    .leftJoin("KAKA", "ll", "lk")
-                    .rightJoin("KAKA", "ll", "lk")
-                    .leftJoin("KAKA", "ll", "lk")
-                    .groupBy("kakaka")
-                    .groupBy("asdasd")
-                    .order("haha", SORT_DIRECTION.ASC)
-                    .order("haha", SORT_DIRECTION.ASC)
-                    .build();
-            System.out.println(sel.toStringQuery(false));
-            System.out.println(sel.toPrettyStringQuery());
-            System.out.println("");
-            System.out.println(SQLFactory.SELECT.union(sel, sel1));
         }
 
         public static String union(SQLFactory.SELECT... selects) {
@@ -379,17 +321,21 @@ public class SQLFactory {
         private List<Pair<SQLFactory.COLUMN, Pair<String, Object>>> columnParameterValueList = new ArrayList<>();
         private SQLFactory.TABLE table;
         private List<SQLFactory.CONDITIONS> conditionsList = new ArrayList<>();
+
         private void addConditions(CONDITIONS conditions1) {
             this.conditionsList.add(conditions1);
         }
+
         public static class Builder {
             private SQLFactory.UPDATE updatePrototype = new SQLFactory.UPDATE();
 
 
-            public Builder set(String column, String parameter, Object value){
-                this.updatePrototype.columnParameterValueList.add(Pair.of(new SQLFactory.COLUMN(column), Pair.of(parameter, value)));
+            public Builder set(String column, String parameter, Object value) {
+                this.updatePrototype.columnParameterValueList.add(
+                        Pair.of(new SQLFactory.COLUMN(column), Pair.of(parameter, value)));
                 return this;
             }
+
             public Builder conditions(SQLFactory.CONDITIONS conditions_1) {
                 this.updatePrototype.addConditions(conditions_1);
                 return this;
@@ -399,15 +345,17 @@ public class SQLFactory {
                 this.updatePrototype.table = new SQLFactory.TABLE(table);
                 return this;
             }
+
             public SQLFactory.UPDATE build() {
                 return this.updatePrototype;
             }
+
             public SQLFactory.UPDATE get() {
                 return this.updatePrototype;
             }
         }
 
-        public String toStringQuery(){
+        public String toStringQuery() {
             StringBuilder b = new StringBuilder();
             b.append(SQLFactory.UPDATE_OP).append(' ');
             b.append(this.table.toString());
@@ -425,16 +373,6 @@ public class SQLFactory {
             }
             return b.append(';').toString();
         }
-
-        public static void main(String[] args) {
-            SQLFactory.UPDATE up = new SQLFactory.UPDATE.Builder()
-                    .set("haha", "kaka", "kaka")
-                    .table("lala")
-                    .conditions(SQLFactory.CONDITIONS.init("lala", SQLOperator.EQUALS, Map.of(":haha", "123")))
-                    .build();
-            System.out.print(up.toStringQuery());
-        }
-
     }
 
     public static class DELETE {
@@ -444,15 +382,17 @@ public class SQLFactory {
         private void setTable(TABLE table) {
             this.table = table;
         }
+
         private void addConditions(CONDITIONS conditions1) {
             this.conditionsList.add(conditions1);
         }
+
         public static class Builder {
 
 
             private SQLFactory.DELETE deletePrototype = new SQLFactory.DELETE();
 
-            public Builder table(String table){
+            public Builder table(String table) {
                 this.deletePrototype.setTable(new SQLFactory.TABLE(table));
                 return this;
             }
@@ -461,6 +401,7 @@ public class SQLFactory {
                 this.deletePrototype.addConditions(conditions_1);
                 return this;
             }
+
             public SQLFactory.DELETE build() {
                 return this.deletePrototype;
             }
@@ -471,7 +412,7 @@ public class SQLFactory {
 
         }
 
-        public String toQueryString(){
+        public String toQueryString() {
             StringBuilder b = new StringBuilder();
             b.append(SQLFactory.DELETE_OP).append("FROM ");
             b.append(this.table.toString());
