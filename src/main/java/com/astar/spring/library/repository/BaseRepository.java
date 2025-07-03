@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Optional;
 
 //TODO IMPROVE
+//TODO TEST
 public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements BaseRepositoryInterface<T,ID> {
     private final EntityManager entityManager;
     private final Class<T> clazz;
@@ -52,7 +53,7 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
 
 
     @Override
-    public <S extends SQLFilter> List<Tuple> query(String... columns) {
+    public List<Tuple> query(String... columns) {
         CriteriaBuilder criteriaBuilder = this.entityManager.getCriteriaBuilder();
         CriteriaQuery<Tuple> criteriaQuery = criteriaBuilder.createTupleQuery();
         Root<T> root = criteriaQuery.from(this.clazz);
@@ -103,7 +104,13 @@ public class BaseRepository<T, ID> extends SimpleJpaRepository<T, ID> implements
     }
 
     @Override
-    public <D> List<D> HQLList(String query, Class<D> clazz) {
+    public <D> D hibernateQueryObject(String query, Class<D> clazz) {
+        TypedQuery<D>  typedQuery = this.entityManager.createQuery(query, clazz);
+        return typedQuery.getSingleResult();
+    }
+
+    @Override
+    public <D> List<D> hibernateQueryList(String query, Class<D> clazz) {
         TypedQuery<D> typedQuery = this.entityManager.createQuery(query, clazz);
         return typedQuery.getResultList();
     }
