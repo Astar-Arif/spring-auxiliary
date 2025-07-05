@@ -1,6 +1,6 @@
 package com.astar.spring.library;
 
-import com.astar.common.library.utils.UniqueUtility;
+import com.astar.java.library.utils.UniqueUtility;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedBy;

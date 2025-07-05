@@ -1,7 +1,7 @@
 package com.astar.spring.library.pojo;
 
 import com.astar.spring.library.annotation.MobileNumber;
-import com.astar.common.library.utils.StringUtility;
+import com.astar.java.library.utils.StringUtility;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 

@@ -1,8 +1,8 @@
 package com.astar.spring.library.utils;
 
-import com.astar.common.library.utils.ArrayUtility;
-import com.astar.common.library.utils.ObjectUtility;
-import com.astar.common.library.utils.ParserUtility;
+import com.astar.java.library.utils.ArrayUtility;
+import com.astar.java.library.utils.ObjectUtility;
+import com.astar.java.library.utils.ParserUtility;
 import com.astar.spring.library.enums.LogicalOperator;
 import com.astar.spring.library.enums.SQLOperator;
 import com.astar.spring.library.pojo.Filter;

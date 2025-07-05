@@ -1,6 +1,6 @@
 package com.astar.spring.library;
 
-import com.astar.common.library.utils.StringUtility;
+import com.astar.java.library.utils.StringUtility;
 import com.astar.spring.library.enums.LogicalOperator;
 import com.astar.spring.library.enums.SQLOperator;
 import org.apache.commons.lang3.tuple.Pair;
