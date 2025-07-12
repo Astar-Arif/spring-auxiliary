@@ -1,6 +1,6 @@
 package com.astar.spring.library.pojo;
 
-import com.astar.spring.library.utils.JacksonUtility;
+import com.astar.spring.library.utils.ObjectMappingUtility;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletRequestWrapper;
 import org.slf4j.Logger;
@@ -22,7 +22,7 @@ public class Application extends AbstractHttpMessageConverter<Object> {
     public static <T> T decipherRequestBody(HttpServletRequest request, Class<T> clazz)
             throws IOException {
         String requestBody = requestInputStreamToString(request);
-        return JacksonUtility.JSONStringToObject(requestBody, clazz);
+        return ObjectMappingUtility.JSONStringToObject(requestBody, clazz);
     }
 
     public static String requestInputStreamToString(HttpServletRequest request) throws IOException {
