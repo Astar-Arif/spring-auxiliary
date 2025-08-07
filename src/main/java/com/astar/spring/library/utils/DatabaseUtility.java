@@ -281,8 +281,8 @@ public abstract class DatabaseUtility {
                 } else if (filter.getValue() instanceof Subquery<?> subquery) {
                     yield path.in(subquery);
                 }
-                Object convertedValue = ParserUtility.parseTo(path.getJavaType(),
-                                                              filter.getValue());
+                Object convertedValue = ParserUtility.typeCastTo(path.getJavaType(),
+                                                                 filter.getValue());
                 yield path.in(convertedValue);
             }
             case NOT_IN -> {
@@ -291,8 +291,8 @@ public abstract class DatabaseUtility {
                 } else if (filter.getValue() instanceof Subquery<?> subquery) {
                     yield criteriaBuilder.not(path.in(subquery));
                 }
-                Object convertedValue = ParserUtility.parseTo(path.getJavaType(),
-                                                              filter.getValue());
+                Object convertedValue = ParserUtility.typeCastTo(path.getJavaType(),
+                                                                 filter.getValue());
                 yield criteriaBuilder.not(path.in(convertedValue));
             }
             case GREATER_THAN,

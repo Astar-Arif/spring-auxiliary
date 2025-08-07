@@ -28,10 +28,7 @@ public abstract class ObjectMappingUtility {
      * @param isPrettyPrint
      * @return
      */
-    public static String objectToJSONString(
-            Object obj,
-            boolean isPrettyPrint,
-            @Nullable Class<?> viewLevel
+    public static String objectToJSONString(Object obj, boolean isPrettyPrint, @Nullable Class<?> viewLevel
     ) throws JsonProcessingException {
 
         try {
@@ -73,8 +70,8 @@ public abstract class ObjectMappingUtility {
 
 
     public static <T> T JSONStringToObject(
-            String requestBody, Class<T> clazz) throws JsonProcessingException {
-        return OBJECT_MAPPER.readValue(requestBody, clazz);
+            String JSONString, Class<T> clazz) throws JsonProcessingException {
+        return OBJECT_MAPPER.readValue(JSONString, clazz);
     }
 
 
