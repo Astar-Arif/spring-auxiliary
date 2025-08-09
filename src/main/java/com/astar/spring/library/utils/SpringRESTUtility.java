@@ -28,8 +28,8 @@ import java.util.concurrent.TimeUnit;
 
 // TODO LOG THE REQUEST BODY
 @Service
-public class RESTUtility {
-    private final static Logger LOGGER = LoggerFactory.getLogger(RESTUtility.class);
+public class SpringRESTUtility {
+    private final static Logger LOGGER = LoggerFactory.getLogger(SpringRESTUtility.class);
 
     private final WebClient.Builder clientBuilder;
 
@@ -38,7 +38,7 @@ public class RESTUtility {
      *
      * @param builder the builder
      */
-    public RESTUtility(WebClient.Builder builder) {
+    public SpringRESTUtility(WebClient.Builder builder) {
         this.clientBuilder = builder;
     }
 
